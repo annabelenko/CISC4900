@@ -1,0 +1,24 @@
+{
+  "name": "phaser-game",
+  "version": "1.0.0",
+  "description": "A basic Phaser.js game project",
+  "main": "index.html",
+  "scripts": {
+    "start": "npx http-server . -p 8000",
+    "dev": "npx http-server . -p 8000 -o"
+  },
+  "keywords": [
+    "phaser",
+    "game",
+    "javascript",
+    "html5"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "http-server": "^14.1.1"
+  },
+  "dependencies": {
+    "phaser": "^3.70.0"
+  }
+}
