@@ -14,8 +14,125 @@
     <!-- Phaser 3 CDN -->
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.70.0/dist/phaser.min.js"></script>
     
-    <!-- Game Scripts -->
-    <script src="src/scenes/MainScene.js"></script>
-    <script src="src/main.js"></script>
+    <!-- Game Scripts - MainScene must load before main.js -->
+    <script>
+        console.log('Loading MainScene...');
+        
+        class MainScene extends Phaser.Scene {
+            constructor() {
+                super({ key: 'MainScene' });
+                console.log('MainScene constructor called');
+            }
+
+            preload() {
+                console.log('MainScene preload called');
+            }
+
+            create() {
+                console.log('MainScene create called - setting up game objects');
+                
+                // Add a welcome text
+                this.add.text(400, 100, 'Welcome to Phaser - Use WASD or Arrow Keys!', {
+                    fontSize: '24px',
+                    fill: '#ffffff',
+                    fontFamily: 'Arial'
+                }).setOrigin(0.5);
+
+                // Create platforms using built-in rectangles
+                this.platforms = this.physics.add.staticGroup();
+                
+                // Ground platform - large green rectangle at bottom
+                const ground = this.add.rectangle(400, 568, 800, 64, 0x00ff00);
+                this.physics.add.existing(ground, true);
+                this.platforms.add(ground);
+                
+                // Floating platforms
+                const platform1 = this.add.rectangle(600, 400, 200, 32, 0x00aa00);
+                this.physics.add.existing(platform1, true);
+                this.platforms.add(platform1);
+                
+                const platform2 = this.add.rectangle(200, 250, 200, 32, 0x00aa00);
+                this.physics.add.existing(platform2, true);
+                this.platforms.add(platform2);
+                
+                // Small blue platforms
+                const smallPlat1 = this.add.rectangle(300, 350, 80, 20, 0x00ccff);
+                this.physics.add.existing(smallPlat1, true);
+                this.platforms.add(smallPlat1);
+                
+                const smallPlat2 = this.add.rectangle(500, 180, 70, 20, 0x00ccff);
+                this.physics.add.existing(smallPlat2, true);
+                this.platforms.add(smallPlat2);
+
+                // Create player - red rectangle
+                this.player = this.add.rectangle(100, 450, 24, 32, 0xff4444);
+                this.physics.add.existing(this.player);
+                this.player.body.setBounce(0.2);
+                this.player.body.setCollideWorldBounds(true);
+
+                // Player physics
+                this.physics.add.collider(this.player, this.platforms);
+
+                // Controls
+                this.cursors = this.input.keyboard.createCursorKeys();
+                this.wasd = this.input.keyboard.addKeys('W,S,A,D');
+
+                // Instructions
+                this.add.text(50, 50, 'Arrow keys/WASD: Move | Up/W: Jump', {
+                    fontSize: '16px',
+                    fill: '#ffffff',
+                    fontFamily: 'Arial'
+                });
+                
+                console.log('MainScene create completed - game should be visible now');
+            }
+
+            update() {
+                // Player movement
+                if (this.cursors.left.isDown || this.wasd.A.isDown) {
+                    this.player.body.setVelocityX(-180);
+                }
+                else if (this.cursors.right.isDown || this.wasd.D.isDown) {
+                    this.player.body.setVelocityX(180);
+                }
+                else {
+                    this.player.body.setVelocityX(0);
+                }
+
+                // Jumping
+                if ((this.cursors.up.isDown || this.wasd.W.isDown) && this.player.body.touching.down) {
+                    this.player.body.setVelocityY(-350);
+                }
+                
+                // Variable jump height
+                if (this.player.body.velocity.y < 0 && !(this.cursors.up.isDown || this.wasd.W.isDown)) {
+                    this.player.body.setVelocityY(this.player.body.velocity.y * 0.5);
+                }
+            }
+        }
+
+        console.log('MainScene defined, starting game...');
+
+        // Game configuration
+        const gameConfig = {
+            type: Phaser.AUTO,
+            width: 800,
+            height: 600,
+            parent: 'phaser-game',
+            backgroundColor: '#2c3e50',
+            physics: {
+                default: 'arcade',
+                arcade: {
+                    gravity: { y: 300 },
+                    debug: false
+                }
+            },
+            scene: [MainScene]
+        };
+
+        // Initialize the game
+        const game = new Phaser.Game(gameConfig);
+        console.log('Game initialized!');
+    </script>
 </body>
 </html>

@@ -1,46 +1,63 @@
 class MainScene extends Phaser.Scene {
     constructor() {
         super({ key: 'MainScene' });
+        console.log('MainScene constructor called');
     }
 
     preload() {
-        // Create simple colored rectangles for testing
-        this.load.image('ground', 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==');
-        this.load.image('player', 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==');
+        console.log('MainScene preload called');
+        // No need to preload anything - we'll use built-in shapes
     }
 
     create() {
+        console.log('MainScene create called - setting up game objects');
+        
         // Add a welcome text
-        this.add.text(400, 100, 'Welcome to Phaser!', {
-            fontSize: '32px',
+        this.add.text(400, 100, 'Welcome to Phaser - Use WASD or Arrow Keys!', {
+            fontSize: '24px',
             fill: '#ffffff',
             fontFamily: 'Arial'
         }).setOrigin(0.5);
 
-        // Create platforms
+        // Create platforms using built-in rectangles
         this.platforms = this.physics.add.staticGroup();
         
-        // Ground platform
-        this.platforms.create(400, 568, 'ground').setScale(800, 64).refreshBody().setTint(0x00ff00);
+        // Ground platform - create a filled rectangle
+        const ground = this.add.rectangle(400, 568, 800, 64, 0x00ff00);
+        this.physics.add.existing(ground, true); // true = static body
+        this.platforms.add(ground);
         
         // Large floating platforms
-        this.platforms.create(600, 400, 'ground').setScale(200, 32).refreshBody().setTint(0x00ff00);
-        this.platforms.create(50, 250, 'ground').setScale(200, 32).refreshBody().setTint(0x00ff00);
-        this.platforms.create(750, 220, 'ground').setScale(200, 32).refreshBody().setTint(0x00ff00);
+        const platform1 = this.add.rectangle(600, 400, 200, 32, 0x00aa00);
+        this.physics.add.existing(platform1, true);
+        this.platforms.add(platform1);
+        
+        const platform2 = this.add.rectangle(200, 250, 200, 32, 0x00aa00);
+        this.physics.add.existing(platform2, true);
+        this.platforms.add(platform2);
+        
+        const platform3 = this.add.rectangle(750, 220, 200, 32, 0x00aa00);
+        this.physics.add.existing(platform3, true);
+        this.platforms.add(platform3);
         
         // Small platforms for vertical movement
-        this.platforms.create(300, 350, 'ground').setScale(80, 20).refreshBody().setTint(0x00ccff);
-        this.platforms.create(400, 300, 'ground').setScale(60, 20).refreshBody().setTint(0x00ccff);
-        this.platforms.create(500, 250, 'ground').setScale(70, 20).refreshBody().setTint(0x00ccff);
-        this.platforms.create(350, 180, 'ground').setScale(80, 20).refreshBody().setTint(0x00ccff);
-        this.platforms.create(450, 130, 'ground').setScale(60, 20).refreshBody().setTint(0x00ccff);
+        const smallPlat1 = this.add.rectangle(300, 350, 80, 20, 0x00ccff);
+        this.physics.add.existing(smallPlat1, true);
+        this.platforms.add(smallPlat1);
+        
+        const smallPlat2 = this.add.rectangle(400, 300, 60, 20, 0x00ccff);
+        this.physics.add.existing(smallPlat2, true);
+        this.platforms.add(smallPlat2);
+        
+        const smallPlat3 = this.add.rectangle(500, 180, 70, 20, 0x00ccff);
+        this.physics.add.existing(smallPlat3, true);
+        this.platforms.add(smallPlat3);
 
-        // Create player
-        this.player = this.physics.add.sprite(100, 450, 'player');
-        this.player.setDisplaySize(24, 32);
-        this.player.setTint(0xff4444);
-        this.player.setBounce(0.2);
-        this.player.setCollideWorldBounds(true);
+        // Create player using built-in rectangle
+        this.player = this.add.rectangle(100, 450, 24, 32, 0xff4444);
+        this.physics.add.existing(this.player);
+        this.player.body.setBounce(0.2);
+        this.player.body.setCollideWorldBounds(true);
 
         // Player physics
         this.physics.add.collider(this.player, this.platforms);
@@ -49,6 +66,8 @@ class MainScene extends Phaser.Scene {
         this.cursors = this.input.keyboard.createCursorKeys();
         this.wasd = this.input.keyboard.addKeys('W,S,A,D');
 
+        console.log('MainScene create completed - game should be visible now');
+
         // Instructions
         this.add.text(50, 50, 'Arrow keys/WASD: Move | Up/W: Jump', {
             fontSize: '16px',
@@ -56,7 +75,7 @@ class MainScene extends Phaser.Scene {
             fontFamily: 'Arial'
         });
         
-        this.add.text(50, 70, 'Blue platforms: Small stepping stones', {
+        this.add.text(50, 70, 'Red square = Player | Green = Platforms | Blue = Small platforms', {
             fontSize: '14px',
             fill: '#00ccff',
             fontFamily: 'Arial'
@@ -66,23 +85,23 @@ class MainScene extends Phaser.Scene {
     update() {
         // Player movement
         if (this.cursors.left.isDown || this.wasd.A.isDown) {
-            this.player.setVelocityX(-180);
+            this.player.body.setVelocityX(-180);
         }
         else if (this.cursors.right.isDown || this.wasd.D.isDown) {
-            this.player.setVelocityX(180);
+            this.player.body.setVelocityX(180);
         }
         else {
-            this.player.setVelocityX(0);
+            this.player.body.setVelocityX(0);
         }
 
         // Jumping - improved for better platform navigation
         if ((this.cursors.up.isDown || this.wasd.W.isDown) && this.player.body.touching.down) {
-            this.player.setVelocityY(-350);
+            this.player.body.setVelocityY(-350);
         }
         
         // Variable jump height - release key for shorter jump
         if (this.player.body.velocity.y < 0 && !(this.cursors.up.isDown || this.wasd.W.isDown)) {
-            this.player.setVelocityY(this.player.body.velocity.y * 0.5);
+            this.player.body.setVelocityY(this.player.body.velocity.y * 0.5);
         }
     }
 }
