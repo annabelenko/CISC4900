@@ -4,7 +4,7 @@ A 2D platformer game built with Phaser.js featuring character switching, pixel a
 
 ## Demo
 
-![Game Demo](CISC4900/demo.gif)
+![Game Demo](demo.gif)
 
 ## 📋 Prerequisites
 
