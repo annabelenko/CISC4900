@@ -26,10 +26,25 @@
 
             preload() {
                 console.log('MainScene preload called');
+                
+                // Load both character spritesheets
+                this.load.atlas('anna', 'assets/anna.png', 'assets/anna.json');
+                this.load.atlas('lu', 'assets/lu.png', 'assets/lu.json');
+                
+                // Configure texture for pixel art (no smoothing)
+                this.load.on('filecomplete-atlas-anna', () => {
+                    this.textures.get('anna').setFilter(Phaser.Textures.FilterMode.NEAREST);
+                });
+                this.load.on('filecomplete-atlas-lu', () => {
+                    this.textures.get('lu').setFilter(Phaser.Textures.FilterMode.NEAREST);
+                });
             }
 
             create() {
                 console.log('MainScene create called - setting up game objects');
+                
+                // Track current character
+                this.currentCharacter = 'anna';
                 
                 // Add a welcome text
                 this.add.text(400, 100, 'Welcome to Phaser - Use WASD or Arrow Keys!', {
@@ -64,11 +79,89 @@
                 this.physics.add.existing(smallPlat2, true);
                 this.platforms.add(smallPlat2);
 
-                // Create player - red rectangle
-                this.player = this.add.rectangle(100, 450, 24, 32, 0xff4444);
-                this.physics.add.existing(this.player);
-                this.player.body.setBounce(0.2);
-                this.player.body.setCollideWorldBounds(true);
+                // Create player using the spritesheet
+                this.player = this.physics.add.sprite(100, 450, 'anna');
+                this.player.setScale(4); // Make character 2x bigger
+                this.player.setBounce(0.2);
+                this.player.setCollideWorldBounds(true);
+
+                // Create animations for both characters
+                // Anna animations
+                this.anims.create({
+                    key: 'anna-idle',
+                    frames: this.anims.generateFrameNames('anna', { 
+                        prefix: 'Sprite-0002 ', 
+                        suffix: '.aseprite', 
+                        start: 5, 
+                        end: 5 
+                    }),
+                    frameRate: 1,
+                    repeat: 0
+                });
+
+                this.anims.create({
+                    key: 'anna-walk',
+                    frames: this.anims.generateFrameNames('anna', { 
+                        prefix: 'Sprite-0002 ', 
+                        suffix: '.aseprite', 
+                        start: 0, 
+                        end: 11 
+                    }),
+                    frameRate: 10,
+                    repeat: -1
+                });
+
+                this.anims.create({
+                    key: 'anna-jump',
+                    frames: this.anims.generateFrameNames('anna', { 
+                        prefix: 'Sprite-0002 ', 
+                        suffix: '.aseprite', 
+                        start: 6, 
+                        end: 8 
+                    }),
+                    frameRate: 8,
+                    repeat: 0
+                });
+
+                // Lu animations  
+                this.anims.create({
+                    key: 'lu-idle',
+                    frames: this.anims.generateFrameNames('lu', { 
+                        prefix: 'Sprite-0001 ', 
+                        suffix: '.', 
+                        start: 5, 
+                        end: 5 
+                    }),
+                    frameRate: 1,
+                    repeat: 0
+                });
+
+                this.anims.create({
+                    key: 'lu-walk',
+                    frames: this.anims.generateFrameNames('lu', { 
+                        prefix: 'Sprite-0001 ', 
+                        suffix: '.', 
+                        start: 0, 
+                        end: 11 
+                    }),
+                    frameRate: 10,
+                    repeat: -1
+                });
+
+                this.anims.create({
+                    key: 'lu-jump',
+                    frames: this.anims.generateFrameNames('lu', { 
+                        prefix: 'Sprite-0001 ', 
+                        suffix: '.', 
+                        start: 6, 
+                        end: 8 
+                    }),
+                    frameRate: 8,
+                    repeat: 0
+                });
+
+                // Start with Anna idle
+                this.player.anims.play('anna-idle');
 
                 // Player physics
                 this.physics.add.collider(this.player, this.platforms);
@@ -77,6 +170,25 @@
                 this.cursors = this.input.keyboard.createCursorKeys();
                 this.wasd = this.input.keyboard.addKeys('W,S,A,D');
 
+                // Character switching buttons
+                this.add.rectangle(650, 50, 80, 40, 0x4444ff)
+                    .setInteractive()
+                    .on('pointerdown', () => {
+                        this.currentCharacter = 'anna';
+                        this.player.setTexture('anna');
+                        this.player.anims.play('anna-idle');
+                    });
+                this.add.text(650, 50, 'Anna', { fontSize: '16px', fill: '#ffffff', fontFamily: 'Arial' }).setOrigin(0.5);
+
+                this.add.rectangle(650, 100, 80, 40, 0xff4444)
+                    .setInteractive()
+                    .on('pointerdown', () => {
+                        this.currentCharacter = 'lu';
+                        this.player.setTexture('lu');
+                        this.player.anims.play('lu-idle');
+                    });
+                this.add.text(650, 100, 'Lu', { fontSize: '16px', fill: '#ffffff', fontFamily: 'Arial' }).setOrigin(0.5);
+
                 // Instructions
                 this.add.text(50, 50, 'Arrow keys/WASD: Move | Up/W: Jump', {
                     fontSize: '16px',
@@ -84,29 +196,71 @@
                     fontFamily: 'Arial'
                 });
                 
+                this.add.text(50, 70, 'Anna sprite with animations! Green = Platforms | Blue = Small platforms', {
+                    fontSize: '14px',
+                    fill: '#00ccff',
+                    fontFamily: 'Arial'
+                });
+                
                 console.log('MainScene create completed - game should be visible now');
             }
 
             update() {
+                // Check if movement keys are pressed
+                const isMovingLeft = this.cursors.left.isDown || this.wasd.A.isDown;
+                const isMovingRight = this.cursors.right.isDown || this.wasd.D.isDown;
+                
+                // Get current character animation names
+                const idleAnim = this.currentCharacter + '-idle';
+                const walkAnim = this.currentCharacter + '-walk';
+                const jumpAnim = this.currentCharacter + '-jump';
+                
                 // Player movement
-                if (this.cursors.left.isDown || this.wasd.A.isDown) {
+                if (isMovingLeft) {
                     this.player.body.setVelocityX(-180);
+                    this.player.setFlipX(true); // Flip sprite to face left
+                    
+                    // Only play walking animation if on ground and not already playing
+                    if (this.player.body.touching.down && this.player.anims.currentAnim?.key !== walkAnim) {
+                        this.player.anims.play(walkAnim);
+                    }
                 }
-                else if (this.cursors.right.isDown || this.wasd.D.isDown) {
+                else if (isMovingRight) {
                     this.player.body.setVelocityX(180);
+                    this.player.setFlipX(false); // Face right
+                    
+                    // Only play walking animation if on ground and not already playing
+                    if (this.player.body.touching.down && this.player.anims.currentAnim?.key !== walkAnim) {
+                        this.player.anims.play(walkAnim);
+                    }
                 }
                 else {
                     this.player.body.setVelocityX(0);
+                    
+                    // Play idle (frame 5) when not moving and on ground
+                    if (this.player.body.touching.down && this.player.anims.currentAnim?.key !== idleAnim) {
+                        this.player.anims.play(idleAnim);
+                    }
                 }
 
                 // Jumping
                 if ((this.cursors.up.isDown || this.wasd.W.isDown) && this.player.body.touching.down) {
                     this.player.body.setVelocityY(-350);
+                    this.player.anims.play(jumpAnim);
                 }
                 
                 // Variable jump height
                 if (this.player.body.velocity.y < 0 && !(this.cursors.up.isDown || this.wasd.W.isDown)) {
                     this.player.body.setVelocityY(this.player.body.velocity.y * 0.5);
+                }
+                
+                // Play jump animation when in air
+                if (!this.player.body.touching.down && this.player.body.velocity.y > 0) {
+                    const jumpAnim = this.currentCharacter + '-jump';
+                    // Falling - keep jump animation
+                    if (this.player.anims.currentAnim?.key !== jumpAnim) {
+                        this.player.anims.play(jumpAnim);
+                    }
                 }
             }
         }
@@ -120,6 +274,10 @@
             height: 600,
             parent: 'phaser-game',
             backgroundColor: '#2c3e50',
+            render: {
+                antialias: false,
+                pixelArt: true
+            },
             physics: {
                 default: 'arcade',
                 arcade: {
