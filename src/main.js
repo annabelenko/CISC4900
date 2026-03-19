@@ -1,33 +1,21 @@
-// Game configuration
 const gameConfig = {
     type: Phaser.AUTO,
     width: 800,
     height: 600,
     parent: 'phaser-game',
-    backgroundColor: '#2c3e50',
+    backgroundColor: '#1a1a2e',
     physics: {
         default: 'arcade',
         arcade: {
-            gravity: { y: 300 },
+            gravity: { y: 320 },
             debug: false
         }
     },
-    scene: [MainScene]
+    scene: [MainScene, WinScene, GameOverScene]
 };
 
-// Add some debugging
-console.log('Starting Phaser game...');
-console.log('MainScene available:', typeof MainScene !== 'undefined');
-
-// Initialize the game
 const game = new Phaser.Game(gameConfig);
 
-// Add event listeners to check if game starts
-game.events.on('ready', () => {
-    console.log('Game is ready!');
-});
-
-// Add error handling
 window.addEventListener('error', (e) => {
-    console.error('JavaScript Error:', e.message, e.filename, e.lineno);
+    console.error('Game Error:', e.message, e.filename, e.lineno);
 });
