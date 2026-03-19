@@ -4,6 +4,10 @@ const gameConfig = {
     height: 600,
     parent: 'phaser-game',
     backgroundColor: '#1a1a2e',
+    render: {
+        antialias: false,
+        pixelArt: true
+    },
     physics: {
         default: 'arcade',
         arcade: {
