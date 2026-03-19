@@ -108,7 +108,10 @@ class MainScene extends Phaser.Scene {
 
     buildPlayer() {
         this.player = this.physics.add.sprite(100, 450, 'anna');
-        this.player.setScale(4);
+        this.player.setScale(2.5);
+        //fix invisible hitbox around the player
+        this.player.body.setSize(14, 28);
+        this.player.body.setOffset(9, 4);
         this.player.setBounce(0.1);
         this.player.setCollideWorldBounds(true);
     }
@@ -165,9 +168,9 @@ class MainScene extends Phaser.Scene {
 
     buildGuard() {
         this.guard = this.add.rectangle(658, 506, 28, 46, 0x667788);
-        this.add.circle(658, 473, 12, 0xddbb99);
-        this.add.rectangle(658, 461, 28, 8, 0x334455);
-        this.add.text(636, 518, 'GUARD', {
+        this.add.circle(690, 473, 12, 0xddbb99);
+        this.add.rectangle(690, 461, 28, 8, 0x334455);
+        this.add.text(668, 518, 'GUARD', {
             fontSize: '11px', fill: '#aabbcc', fontFamily: 'monospace'
         });
     }
