@@ -167,10 +167,10 @@ class MainScene extends Phaser.Scene {
     // ─── Guard ────────────────────────────────────────────────────────────────
 
     buildGuard() {
-        this.guard = this.add.rectangle(658, 506, 28, 46, 0x667788);
+        this.guard = this.add.rectangle(690, 506, 28, 46, 0x667788);
         this.add.circle(690, 473, 12, 0xddbb99);
         this.add.rectangle(690, 461, 28, 8, 0x334455);
-        this.add.text(668, 518, 'GUARD', {
+        this.add.text(675, 518, 'GUARD', {
             fontSize: '11px', fill: '#aabbcc', fontFamily: 'monospace'
         });
     }
