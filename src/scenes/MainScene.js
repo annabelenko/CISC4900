@@ -92,6 +92,7 @@ class MainScene extends Phaser.Scene {
         const addPlat = (x, y, w, h, color) => {
             const p = this.add.rectangle(x, y, w, h, color);
             this.physics.add.existing(p, true);
+            p.body.reset(x, y);
             this.platforms.add(p);
         };
 
