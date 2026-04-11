@@ -112,8 +112,8 @@ class MainScene extends Phaser.Scene {
         this.player = this.physics.add.sprite(100, 450, 'anna');
         this.player.setScale(2.5);
         //fix invisible hitbox around the player
-        this.player.body.setSize(14, 28);
-        this.player.body.setOffset(9, 4);
+        this.player.body.setSize(8, 24);
+        this.player.body.setOffset(5, 6);
         this.player.setBounce(0.1);
         this.player.setCollideWorldBounds(true);
     }
