@@ -394,7 +394,8 @@ class MainScene extends Phaser.Scene {
             this.time.delayedCall(1000, () => {
                 this.scene.start('GameOverScene', {
                     anxiety: this.gameState.anxiety,
-                    choices: this.gameState.choices
+                    choices: this.gameState.choices,
+                    character: this.currentCharacter
                 });
             });
         }
