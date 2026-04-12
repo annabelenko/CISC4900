@@ -50,7 +50,7 @@ class WinScene extends Phaser.Scene {
             }).setOrigin(0.5);
 
             this.input.keyboard.once('keydown-SPACE', () => {
-                this.scene.start('MainScene');
+                this.scene.start('TitleScene');
             });
         } else {
             // Between levels

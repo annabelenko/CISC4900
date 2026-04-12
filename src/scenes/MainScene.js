@@ -367,7 +367,8 @@ class MainScene extends Phaser.Scene {
             this.time.delayedCall(1500, () => {
                 this.scene.start('WinScene', {
                     score: this.gameState.score,
-                    choices: this.gameState.choices
+                    choices: this.gameState.choices,
+                    character: this.currentCharacter
                 });
             });
         }
