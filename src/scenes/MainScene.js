@@ -29,13 +29,18 @@ class MainScene extends Phaser.Scene {
         this.playerDir = 'right';
         this.isNearGuard = false;
         this.isChoosing = false;
+        this.isAnswering = false;
+        this.currentQuestion = null;
+        this.questionCooldown = false;
 
         this.buildBackground();
         this.buildPlatforms();
+        this.buildTokens();
         this.buildPlayer();
         this.buildAnimations();
         this.buildGuard();
         this.buildUI();
+        this.buildQuestionUI();
         this.setupControls();
         this.setupColliders();
 
@@ -106,10 +111,45 @@ class MainScene extends Phaser.Scene {
         addPlat(520, 240, 70, 14, 0x006688);
     }
 
+    // ─── Tokens ──────────────────────────────────────────────────────────────
+
+    buildTokens() {
+        this.tokens = this.physics.add.staticGroup();
+
+        const positions = [
+            { x: 600, y: 398 },
+            { x: 200, y: 278 },
+            { x: 750, y: 238 },
+            { x: 330, y: 351 },
+            { x: 430, y: 311 },
+        ];
+
+        positions.forEach((pos) => {
+            const token = this.add.rectangle(pos.x, pos.y, 24, 24, 0xffdd00);
+            token.setStrokeStyle(2, 0xff8800);
+            this.physics.add.existing(token, true);
+            token.body.setSize(24, 24);
+            token.body.reset(pos.x, pos.y);
+            this.tokens.add(token);
+
+            const label = this.add.text(pos.x, pos.y, '?', {
+                fontSize: '16px', fill: '#885500', fontFamily: 'monospace', fontStyle: 'bold'
+            }).setOrigin(0.5);
+            token.label = label;
+
+            this.tweens.add({
+                targets: [token, label],
+                scaleX: 1.2, scaleY: 1.2,
+                duration: 500, yoyo: true, repeat: -1,
+                ease: 'Sine.easeInOut'
+            });
+        });
+    }
+
     // ─── Player ───────────────────────────────────────────────────────────────
 
     buildPlayer() {
-        this.player = this.physics.add.sprite(100, 450, 'anna');
+        this.player = this.physics.add.sprite(520, 190, 'anna');
         this.player.setScale(2.5);
         //fix invisible hitbox around the player
         this.player.body.setSize(8, 24);
@@ -240,10 +280,12 @@ class MainScene extends Phaser.Scene {
         this.oneKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ONE);
         this.twoKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.TWO);
         this.threeKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.THREE);
+        this.fourKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.FOUR);
     }
 
     setupColliders() {
         this.physics.add.collider(this.player, this.platforms);
+        this.physics.add.overlap(this.player, this.tokens, this.collectToken, null, this);
     }
 
     // ─── Character Switch ─────────────────────────────────────────────────────
@@ -260,11 +302,12 @@ class MainScene extends Phaser.Scene {
         this.handleMovement();
         this.handleGuardInteraction();
         this.handleChoices();
+        this.handleQuestionInput();
         this.updateUI();
     }
 
     handleMovement() {
-        if (this.isChoosing) return;
+        if (this.isChoosing || this.isAnswering) return;
 
         const char = this.currentCharacter;
         const onGround = this.player.body.touching.down;
@@ -307,7 +350,7 @@ class MainScene extends Phaser.Scene {
     }
 
     handleGuardInteraction() {
-        if (this.isChoosing || this.gameState.interactionCooldown) return;
+        if (this.isChoosing || this.isAnswering || this.gameState.interactionCooldown) return;
 
         const dist = Phaser.Math.Distance.Between(
             this.player.x, this.player.y,
@@ -400,6 +443,110 @@ class MainScene extends Phaser.Scene {
                 });
             });
         }
+    }
+
+    // ─── Question System ──────────────────────────────────────────────────────
+
+    buildQuestionUI() {
+        this.questionOverlay = this.add.rectangle(400, 300, 800, 600, 0x000000, 0.7)
+            .setVisible(false).setDepth(10);
+        this.questionPanel = this.add.rectangle(400, 280, 520, 300, 0x1a1a3e, 0.95)
+            .setStrokeStyle(2, 0x4488ff).setVisible(false).setDepth(11);
+        this.questionText = this.add.text(400, 180, '', {
+            fontSize: '14px', fill: '#ffffff', fontFamily: 'monospace',
+            wordWrap: { width: 460 }, align: 'center'
+        }).setOrigin(0.5).setVisible(false).setDepth(12);
+
+        this.optionTexts = [];
+        for (let i = 0; i < 4; i++) {
+            const t = this.add.text(180, 230 + i * 35, '', {
+                fontSize: '13px', fill: '#aaddff', fontFamily: 'monospace',
+                wordWrap: { width: 440 }
+            }).setVisible(false).setDepth(12);
+            this.optionTexts.push(t);
+        }
+
+        this.questionResultText = this.add.text(400, 400, '', {
+            fontSize: '14px', fill: '#ffff99', fontFamily: 'monospace'
+        }).setOrigin(0.5).setVisible(false).setDepth(12);
+    }
+
+    collectToken(player, token) {
+        if (this.isAnswering) return;
+        if (token.label) token.label.destroy();
+        token.destroy();
+        this.isAnswering = true;
+        this.player.body.setVelocity(0, 0);
+        this.fetchQuestion();
+    }
+
+    async fetchQuestion() {
+        this.showQuestionLoading();
+        try {
+            const res = await fetch('http://localhost:8080/api/question');
+            const data = await res.json();
+            this.currentQuestion = data;
+            this.showQuestion(data);
+        } catch (e) {
+            const fallbacks = [
+                { question: 'What does "accessibility" mean in a digital context?', options: ['Making websites look pretty', 'Ensuring everyone can use digital products', 'Adding more features', 'Using bright colors'], correct: 1 },
+                { question: 'Which HTML element improves screen reader navigation?', options: ['<div>', '<span>', '<section>', '<aria-label>'], correct: 2 },
+                { question: 'What is universal design?', options: ['Design for average users', 'Design usable by all people', 'Design for mobile only', 'Expensive design approach'], correct: 1 },
+                { question: 'Which is a common barrier to accessibility?', options: ['Large buttons', 'Alt text on images', 'Missing captions on videos', 'Keyboard navigation'], correct: 2 },
+                { question: 'What does WCAG stand for?', options: ['Web Content Accessibility Guidelines', 'World Computer Access Group', 'Web Creative Art Guide', 'Wireless Content Access Gateway'], correct: 0 },
+            ];
+            const q = fallbacks[Math.floor(Math.random() * fallbacks.length)];
+            this.currentQuestion = q;
+            this.showQuestion(q);
+        }
+    }
+
+    showQuestionLoading() {
+        this.questionOverlay.setVisible(true);
+        this.questionPanel.setVisible(true);
+        this.questionText.setText('Loading question...').setVisible(true);
+    }
+
+    showQuestion(data) {
+        this.questionText.setText(data.question);
+        data.options.forEach((opt, i) => {
+            this.optionTexts[i].setText(`${i + 1} — ${opt}`).setVisible(true);
+        });
+        this.questionResultText.setText('').setVisible(true);
+    }
+
+    handleQuestionInput() {
+        if (!this.isAnswering || !this.currentQuestion) return;
+        if (this.questionCooldown) return;
+
+        const keys = [this.oneKey, this.twoKey, this.threeKey, this.fourKey];
+        for (let i = 0; i < keys.length; i++) {
+            if (Phaser.Input.Keyboard.JustDown(keys[i])) {
+                const correct = i === this.currentQuestion.correct;
+                if (correct) {
+                    this.gameState.score += 50;
+                    this.questionResultText.setText('Correct! +50 points').setStyle({ fill: '#00ff88' });
+                } else {
+                    this.gameState.anxiety = Math.min(100, this.gameState.anxiety + 15);
+                    this.questionResultText.setText('Wrong! Anxiety +15%').setStyle({ fill: '#ff4444' });
+                }
+                this.questionCooldown = true;
+                this.time.delayedCall(1500, () => this.closeQuestion());
+                this.checkAnxiety();
+                break;
+            }
+        }
+    }
+
+    closeQuestion() {
+        this.isAnswering = false;
+        this.currentQuestion = null;
+        this.questionCooldown = false;
+        this.questionOverlay.setVisible(false);
+        this.questionPanel.setVisible(false);
+        this.questionText.setVisible(false);
+        this.optionTexts.forEach(t => t.setVisible(false));
+        this.questionResultText.setVisible(false);
     }
 
     updateUI() {
