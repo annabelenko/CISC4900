@@ -15,7 +15,7 @@ class MainScene extends Phaser.Scene {
         });
     }
 
-    create() {
+    create(data) {
         this.gameState = {
             level: 1,
             objective: 'Show the correct ID to the security guard',
@@ -25,7 +25,7 @@ class MainScene extends Phaser.Scene {
             interactionCooldown: false
         };
 
-        this.currentCharacter = 'anna';
+        this.currentCharacter = data?.character || 'anna';
         this.playerDir = 'right';
         this.isNearGuard = false;
         this.isChoosing = false;
@@ -92,6 +92,8 @@ class MainScene extends Phaser.Scene {
         const addPlat = (x, y, w, h, color) => {
             const p = this.add.rectangle(x, y, w, h, color);
             this.physics.add.existing(p, true);
+            p.body.setSize(w, h);
+            p.body.reset(x, y);
             this.platforms.add(p);
         };
 
@@ -110,8 +112,8 @@ class MainScene extends Phaser.Scene {
         this.player = this.physics.add.sprite(100, 450, 'anna');
         this.player.setScale(2.5);
         //fix invisible hitbox around the player
-        this.player.body.setSize(14, 28);
-        this.player.body.setOffset(9, 4);
+        this.player.body.setSize(8, 24);
+        this.player.body.setOffset(5, 6);
         this.player.setBounce(0.1);
         this.player.setCollideWorldBounds(true);
     }
@@ -365,7 +367,8 @@ class MainScene extends Phaser.Scene {
             this.time.delayedCall(1500, () => {
                 this.scene.start('WinScene', {
                     score: this.gameState.score,
-                    choices: this.gameState.choices
+                    choices: this.gameState.choices,
+                    character: this.currentCharacter
                 });
             });
         }
@@ -392,7 +395,8 @@ class MainScene extends Phaser.Scene {
             this.time.delayedCall(1000, () => {
                 this.scene.start('GameOverScene', {
                     anxiety: this.gameState.anxiety,
-                    choices: this.gameState.choices
+                    choices: this.gameState.choices,
+                    character: this.currentCharacter
                 });
             });
         }
