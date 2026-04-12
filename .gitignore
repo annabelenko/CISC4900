@@ -25,6 +25,11 @@ build/
 .DS_Store
 Thumbs.db
 
+# Python
+backend/venv/
+__pycache__/
+*.pyc
+
 # Logs
 logs
 *.log
