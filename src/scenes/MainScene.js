@@ -15,7 +15,7 @@ class MainScene extends Phaser.Scene {
         });
     }
 
-    create() {
+    create(data) {
         this.gameState = {
             level: 1,
             objective: 'Show the correct ID to the security guard',
@@ -25,7 +25,7 @@ class MainScene extends Phaser.Scene {
             interactionCooldown: false
         };
 
-        this.currentCharacter = 'anna';
+        this.currentCharacter = data?.character || 'anna';
         this.playerDir = 'right';
         this.isNearGuard = false;
         this.isChoosing = false;
