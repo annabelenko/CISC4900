@@ -192,9 +192,11 @@ this.player.setScale(4);             // Change 4 to desired scale
 
 ## 🚧 Next Steps
 
-- **Multiple levels / checkpoints** — Expand beyond the single security-checkpoint level with new scenes, obstacles, and NPCs.
+- **Token completion gating** — Require all tokens on a level to be collected and answered correctly before the exit unlocks and the player can advance to the next level.
+- **Progressive difficulty** — Increase question difficulty per level by passing the current level number to the AI prompt, so later levels have harder and more specific questions.
+- **More scenes & levels** — Add new environments (library, cafeteria, dorm) each with unique layouts, platforms, and NPCs presenting different accessibility scenarios.
+- **Expanded anxiety system** — Tie anxiety to difficulty scaling — wrong answers trigger harder follow-up questions and reduce time allowed.
 - **Persistent scoring & leaderboard** — Save player scores to a backend so progress carries across sessions.
-- **Expanded anxiety system** — Tie anxiety to difficulty scaling — wrong answers trigger harder follow-up questions.
 - **Additional characters & animations** — Add more playable characters with unique spritesheets.
 - **Sound effects & music** — Add audio feedback for interactions and ambient background music.
 - **Mobile / touch controls** — Add on-screen buttons for phone and tablet support.
