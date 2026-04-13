@@ -448,26 +448,26 @@ class MainScene extends Phaser.Scene {
     // ─── Question System ──────────────────────────────────────────────────────
 
     buildQuestionUI() {
-        this.questionOverlay = this.add.rectangle(400, 300, 800, 600, 0x000000, 0.7)
+         this.questionOverlay = this.add.rectangle(400, 300, 800, 600, 0x000000, 0.75)
             .setVisible(false).setDepth(10);
-        this.questionPanel = this.add.rectangle(400, 280, 520, 300, 0x1a1a3e, 0.95)
-            .setStrokeStyle(2, 0x4488ff).setVisible(false).setDepth(11);
-        this.questionText = this.add.text(400, 180, '', {
-            fontSize: '14px', fill: '#ffffff', fontFamily: 'monospace',
-            wordWrap: { width: 460 }, align: 'center'
+        this.questionPanel = this.add.rectangle(400, 300, 560, 340, 0x111133, 0.97)
+            .setStrokeStyle(3, 0x4488ff).setVisible(false).setDepth(11);
+        this.questionText = this.add.text(400, 175, '', {
+            fontSize: '16px', fill: '#ffffff', fontFamily: 'monospace',
+            wordWrap: { width: 480 }, align: 'center', lineSpacing: 6
         }).setOrigin(0.5).setVisible(false).setDepth(12);
 
         this.optionTexts = [];
         for (let i = 0; i < 4; i++) {
-            const t = this.add.text(180, 230 + i * 35, '', {
-                fontSize: '13px', fill: '#aaddff', fontFamily: 'monospace',
-                wordWrap: { width: 440 }
+            const t = this.add.text(190, 230 + i * 42, '', {
+                fontSize: '15px', fill: '#aaddff', fontFamily: 'monospace',
+                wordWrap: { width: 420 }
             }).setVisible(false).setDepth(12);
             this.optionTexts.push(t);
         }
 
-        this.questionResultText = this.add.text(400, 400, '', {
-            fontSize: '14px', fill: '#ffff99', fontFamily: 'monospace'
+        this.questionResultText = this.add.text(400, 430, '', {
+            fontSize: '16px', fill: '#ffff99', fontFamily: 'monospace'
         }).setOrigin(0.5).setVisible(false).setDepth(12);
     }
 

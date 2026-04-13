@@ -17,12 +17,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash", temperature=0.8)
+llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash", temperature=0.8)
 
 prompt = ChatPromptTemplate.from_template(
-    "Generate a multiple choice question about accessibility, inclusion, "
-    "or overcoming barriers in education. "
-    "Return ONLY valid JSON with this exact format: "
+    "Generate a short multiple choice question (max 15 words) about accessibility or inclusion in education. "
+    "Keep each answer option under 8 words. "
+    "Return ONLY valid JSON: "
     '{{"question": "...", "options": ["A", "B", "C", "D"], "correct": 0}} '
     "where correct is the 0-based index of the right answer."
 )
@@ -34,9 +34,15 @@ chain = prompt | llm
 async def get_question():
     try:
         response = await chain.ainvoke({})
-        data = json.loads(response.content)
+        content = response.content.strip()
+        # Strip markdown code fences if present
+        if content.startswith("```"):
+            content = content.split("\n", 1)[1]
+            content = content.rsplit("```", 1)[0]
+        data = json.loads(content)
         return data
-    except Exception:
+    except Exception as e:
+        print(f"LLM Error: {e}")
         return {
             "question": "What does accessibility mean in education?",
             "options": [
