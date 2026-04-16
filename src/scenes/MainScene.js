@@ -22,7 +22,7 @@ class MainScene extends Phaser.Scene {
             score: 0,
             anxiety: 0,
             choices: [],
-            interactionCooldown: false
+            interactionCooldown: false,
             tokensCollected: 0,
             tokensRequired: 5,
             allTokensComplete: false
