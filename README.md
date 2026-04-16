@@ -1,11 +1,13 @@
-# CISC 4900 — Identity Checkpoint
+# CISC 4900 — Beyond Barriers
 
-A 2D platformer game built with [Phaser 3](https://phaser.io/) where the player navigates a security checkpoint, interacts with a guard, and must present the correct ID to pass. Features character switching, an anxiety meter, branching choices, and pixel-art sprites.
+A 2D platformer game built with [Phaser 3](https://phaser.io/) where the player navigates platforms, collects tokens that trigger AI-generated quiz questions, and must reach the security guard to present the correct ID. Features character switching, an anxiety meter, LangChain-powered questions via Google Gemini, and pixel-art sprites.
 
 ## 📋 Prerequisites
 
 - **Node.js** (version 14 or higher) — [Download here](https://nodejs.org/)
 - **npm** (comes with Node.js)
+- **Python 3.9+** — [Download here](https://www.python.org/)
+- A **Google AI API key** — [Get one here](https://ai.google.dev/)
 - A modern web browser (Chrome, Firefox, Safari, Edge)
 
 ## 🚀 Getting Started
@@ -16,28 +18,51 @@ git clone https://github.com/annabelenko/CISC4900
 cd CISC4900
 ```
 
-### 2. Install Dependencies
+### 2. Install Frontend Dependencies
 ```bash
 npm install
 ```
 
-### 3. Start the Development Server
+### 3. Set Up the Backend
+```bash
+cd backend
+python3 -m venv venv
+source venv/bin/activate   # On Windows: venv\Scripts\activate
+pip install -r requirements.txt
+```
+
+### 4. Configure Environment Variables
+```bash
+cp .env.example .env
+```
+Edit `backend/.env` and add your API key:
+```
+GOOGLE_API_KEY=your-google-api-key-here
+```
+
+### 5. Start the Backend Server
+```bash
+cd backend
+source venv/bin/activate
+uvicorn main:app --reload --port 8080
+```
+
+### 6. Start the Frontend (in a separate terminal)
 ```bash
 npm run dev
 ```
 This starts an HTTP server on **port 8000** and opens `http://localhost:8000` in your default browser.
 
-To start the server without auto-opening the browser:
-```bash
-npm start
-```
+> **Note:** The game works without the backend — it falls back to built-in questions if the API is unavailable.
 
 ## 🎮 How to Play
 
-1. Move your character to the **security guard** near the exit door.
-2. Press **E** to interact — a choice menu appears.
-3. Choose the correct ID (Student ID) to pass through. Wrong answers raise your **anxiety meter**.
-4. If anxiety reaches **100%**, it's game over. Pick the right ID to win!
+1. You start on the **top platform**. Jump down to explore.
+2. Collect **yellow ? tokens** on platforms — each triggers an AI-generated quiz question.
+3. Answer correctly for **+50 points**. Wrong answers raise your **anxiety meter** by 15%.
+4. Reach the **security guard** near the exit and press **E** to interact.
+5. Show the correct ID (Student ID) to win. Wrong answers raise anxiety further.
+6. If anxiety reaches **100%**, it's game over!
 
 ### Controls
 
@@ -47,7 +72,7 @@ npm start
 | **↑ Arrow Key** or **W** | Jump |
 | **E** | Interact with the guard |
 | **H** | Show help hint |
-| **1 / 2 / 3** | Select a choice during interaction |
+| **1 / 2 / 3 / 4** | Select a choice |
 | **Blue "Anna" button** | Switch to Anna character |
 | **Red "Lu" button** | Switch to Lu character |
 
@@ -61,24 +86,31 @@ CISC4900/
 ├── css/
 │   └── style.css               # Game container styling (dark theme)
 ├── assets/
-│   ├── anna.png                # Anna character spritesheet
-│   ├── anna.json               # Anna atlas / animation frame data
-│   ├── lu.png                  # Lu character spritesheet
-│   └── lu.json                 # Lu atlas / animation frame data
-└── src/
-    ├── main.js                 # Phaser game config & initialization
-    └── scenes/
-        ├── MainScene.js        # Core gameplay — platforms, player, guard, choices
-        ├── WinScene.js         # Victory screen (correct ID chosen)
-        └── GameOverScene.js    # Game-over screen (anxiety maxed out)
+│   ├── anna.png / anna.json    # Anna character spritesheet & atlas
+│   └── lu.png / lu.json        # Lu character spritesheet & atlas
+├── src/
+│   ├── main.js                 # Phaser game config & initialization
+│   └── scenes/
+│       ├── TitleScene.js       # Title screen with character select
+│       ├── MainScene.js        # Core gameplay — platforms, tokens, questions, guard
+│       ├── ClassroomScene.js   # Classroom scene
+│       ├── WinScene.js         # Victory screen
+│       └── GameOverScene.js    # Game-over screen
+└── backend/
+    ├── main.py                 # FastAPI server — LangChain + Gemini question API
+    ├── requirements.txt        # Python dependencies
+    ├── .env.example            # Environment variable template
+    └── .env                    # Your API keys (not committed)
 ```
 
 ## 🔧 Tech Stack
 
 - **Phaser 3.70** — HTML5 game framework (loaded via CDN)
+- **FastAPI** — Python backend for the question API
+- **LangChain + Google Gemini 2.5 Flash** — AI-generated quiz questions
+- **LangSmith** — LLM observability and tracing
 - **http-server** — zero-config static file server (dev dependency)
 - **Arcade Physics** — gravity and collision handling
-- **Texture Atlas** — sprite animations defined in JSON
 
 ## 🖼️ Sprite Requirements
 
@@ -160,10 +192,11 @@ this.player.setScale(4);             // Change 4 to desired scale
 
 ## 🚧 Next Steps
 
-- **LangChain-powered question generator** — Replace the hardcoded choice menu with dynamically generated questions using [LangChain.js](https://js.langchain.com/). An LLM-backed chain would produce contextual prompts (e.g., "The guard asks for identification — what do you show?") with varied answer options each playthrough, making the game replayable and unpredictable.
-- **Multiple levels / checkpoints** — Expand beyond the single security-checkpoint level with new scenes, obstacles, and NPCs that each present their own LangChain-generated scenarios.
-- **Persistent scoring & leaderboard** — Save player scores and choices to a backend (e.g., Firebase or a simple Express API) so progress carries across sessions.
-- **Expanded anxiety system** — Tie anxiety changes to LLM-generated difficulty scaling — wrong answers could trigger follow-up questions that get progressively harder.
-- **Additional characters & animations** — Add more playable characters with unique spritesheets and animations.
-- **Sound effects & music** — Add audio feedback for interactions, correct/wrong answers, and ambient background music.
-- **Mobile / touch controls** — Add on-screen buttons so the game is playable on phones and tablets.
+- **Token completion gating** — Require all tokens on a level to be collected and answered correctly before the exit unlocks and the player can advance to the next level.
+- **Progressive difficulty** — Increase question difficulty per level by passing the current level number to the AI prompt, so later levels have harder and more specific questions.
+- **More scenes & levels** — Add new environments (library, cafeteria, dorm) each with unique layouts, platforms, and NPCs presenting different accessibility scenarios.
+- **Expanded anxiety system** — Tie anxiety to difficulty scaling — wrong answers trigger harder follow-up questions and reduce time allowed.
+- **Persistent scoring & leaderboard** — Save player scores to a backend so progress carries across sessions.
+- **Additional characters & animations** — Add more playable characters with unique spritesheets.
+- **Sound effects & music** — Add audio feedback for interactions and ambient background music.
+- **Mobile / touch controls** — Add on-screen buttons for phone and tablet support.
