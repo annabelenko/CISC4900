@@ -23,6 +23,9 @@ class MainScene extends Phaser.Scene {
             anxiety: 0,
             choices: [],
             interactionCooldown: false
+            tokensCollected: 0,
+            tokensRequired: 5,
+            allTokensComplete: false
         };
 
         this.currentCharacter = data?.character || 'anna';
@@ -351,12 +354,25 @@ class MainScene extends Phaser.Scene {
 
     handleGuardInteraction() {
         if (this.isChoosing || this.isAnswering || this.gameState.interactionCooldown) return;
-
+    
+        if (!this.gameState.allTokensComplete) {
+            const dist = Phaser.Math.Distance.Between(
+                this.player.x, this.player.y,
+                this.guard.x, this.guard.y
+            );
+            if (dist < 90) {
+                this.interactText.setText('Answer all ? tokens first!');
+            } else {
+                this.interactText.setText('');
+            }
+            return;
+        }
+    
         const dist = Phaser.Math.Distance.Between(
             this.player.x, this.player.y,
             this.guard.x, this.guard.y
         );
-
+    
         if (dist < 90) {
             this.isNearGuard = true;
             this.interactText.setText('[ Press E to interact ]');
@@ -364,11 +380,11 @@ class MainScene extends Phaser.Scene {
             this.isNearGuard = false;
             this.interactText.setText('');
         }
-
+    
         if (this.isNearGuard && Phaser.Input.Keyboard.JustDown(this.interactKey)) {
             this.openChoiceMenu();
         }
-
+    
         if (Phaser.Input.Keyboard.JustDown(this.helpKey)) {
             this.feedbackText.setText('HELP: Walk to the guard and press E. Show the right ID!');
         }
@@ -518,13 +534,20 @@ class MainScene extends Phaser.Scene {
     handleQuestionInput() {
         if (!this.isAnswering || !this.currentQuestion) return;
         if (this.questionCooldown) return;
-
+    
         const keys = [this.oneKey, this.twoKey, this.threeKey, this.fourKey];
         for (let i = 0; i < keys.length; i++) {
             if (Phaser.Input.Keyboard.JustDown(keys[i])) {
                 const correct = i === this.currentQuestion.correct;
                 if (correct) {
                     this.gameState.score += 50;
+                    this.gameState.tokensCollected += 1;
+    
+                    if (this.gameState.tokensCollected >= this.gameState.tokensRequired) {
+                        this.gameState.allTokensComplete = true;
+                        this.feedbackText.setText('✓ All questions answered! Go talk to the guard!');
+                    }
+    
                     this.questionResultText.setText('Correct! +50 points').setStyle({ fill: '#00ff88' });
                 } else {
                     this.gameState.anxiety = Math.min(100, this.gameState.anxiety + 15);
