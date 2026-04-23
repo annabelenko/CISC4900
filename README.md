@@ -2,6 +2,10 @@
 
 A 2D platformer game built with [Phaser 3](https://phaser.io/) where the player navigates platforms, collects tokens that trigger AI-generated quiz questions, and must reach the security guard to present the correct ID. Features character switching, an anxiety meter, LangChain-powered questions via Google Gemini, and pixel-art sprites.
 
+## Demo
+
+<img width="800" height="508" alt="ezgif-6f4cbf6d1318d13a" src="https://github.com/user-attachments/assets/c28384d7-f7b7-4b16-ae96-6a705ab6417c" />
+
 ## 📋 Prerequisites
 
 - **Node.js** (version 14 or higher) — [Download here](https://nodejs.org/)
