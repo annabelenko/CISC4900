@@ -483,7 +483,9 @@ class MainScene extends Phaser.Scene {
     async fetchQuestion() {
         this.showQuestionLoading();
         try {
-            const res = await fetch('http://localhost:8080/api/question');
+            const res = await fetch(`http://localhost:8080/api/question?t=${Date.now()}`, {
+                cache: 'no-store'
+            });
             const data = await res.json();
             this.currentQuestion = data;
             this.showQuestion(data);
