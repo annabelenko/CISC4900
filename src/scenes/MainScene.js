@@ -43,8 +43,35 @@ class MainScene extends Phaser.Scene {
         this.buildQuestionUI();
         this.setupControls();
         this.setupColliders();
+        this.buildTunnelVision();
 
         this.player.anims.play('anna-idle');
+    }
+
+    // ─── Tunnel Vision ────────────────────────────────────────────────────────
+
+    buildTunnelVision() {
+        // Full-screen dark overlay
+        this.tunnelDark = this.add.graphics().setDepth(500);
+        this.tunnelDark.fillStyle(0x000000, 0.65);
+        this.tunnelDark.fillRect(0, 0, 800, 600);
+
+        // Circle that will be "cut out" of the overlay
+        this.tunnelMask = this.add.graphics().setVisible(false);
+        const mask = this.tunnelMask.createGeometryMask();
+        mask.invertAlpha = true;
+        this.tunnelDark.setMask(mask);
+    }
+
+    updateTunnelVision() {
+        if (this.isAnswering) {
+            this.tunnelDark.setVisible(false);
+            return;
+        }
+        this.tunnelDark.setVisible(true);
+        this.tunnelMask.clear();
+        this.tunnelMask.fillStyle(0xffffff, 1);
+        this.tunnelMask.fillCircle(this.player.x, this.player.y, 70);
     }
 
     // ─── Background ───────────────────────────────────────────────────────────
@@ -304,6 +331,7 @@ class MainScene extends Phaser.Scene {
         this.handleChoices();
         this.handleQuestionInput();
         this.updateUI();
+        this.updateTunnelVision();
     }
 
     handleMovement() {
