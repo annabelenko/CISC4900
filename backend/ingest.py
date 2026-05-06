@@ -37,7 +37,7 @@ def main():
     else:
         print("OCR-ing PDF with docling...")
         full_text = ocr_pdf_with_docling()
-        with open(TEXT_PATH, "w") as f:
+        with open(TEXT_PATH, "w", encoding="utf-8") as f:
             f.write(full_text)
         print(f"  Saved extracted text to {TEXT_PATH}")
 
