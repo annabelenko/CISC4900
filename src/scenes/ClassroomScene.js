@@ -545,7 +545,7 @@ class ClassroomScene extends Phaser.Scene {
         this._prefetchInProgress = true;
         this._discardPrefetch = false;
         try {
-            const res = await fetch(`http://localhost:8080/api/question?t=${Date.now()}`, { cache: 'no-store' });
+            const res = await fetch(`http://localhost:8080/api/question?scene=classroom&t=${Date.now()}`, { cache: 'no-store' });
             const data = await res.json();
             if (!this._discardPrefetch) {
                 this._prefetchedQuestion = data;
@@ -570,7 +570,7 @@ class ClassroomScene extends Phaser.Scene {
         this._discardPrefetch = true;
         this.showQuestionLoading();
         try {
-            const res = await fetch(`http://localhost:8080/api/question?t=${Date.now()}`, { cache: 'no-store' });
+            const res = await fetch(`http://localhost:8080/api/question?scene=classroom&t=${Date.now()}`, { cache: 'no-store' });
             const data = await res.json();
             if (this._fetchCancelled) return;
             this.currentQuestion = data;

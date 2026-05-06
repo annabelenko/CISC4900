@@ -30,38 +30,59 @@ class TitleScene extends Phaser.Scene {
         this.setupControls();
     }
 
+    // ─── Rounded-bg text helper ──────────────────────────────────────────────
+
+    _mkText(x, y, content, style, { radius = 6, padX = 8, padY = 4 } = {}) {
+        const txt = this.add.text(x, y, content, style).setOrigin(0.5);
+        const w = txt.displayWidth + padX * 2;
+        const h = txt.displayHeight + padY * 2;
+        const bg = this.add.graphics();
+        bg.fillStyle(0x000000, 0.85);
+        bg.fillRoundedRect(x - w / 2, y - h / 2, w, h, radius);
+        this.children.moveBelow(bg, txt);
+        return txt;
+    }
+
     // ─── Background ───────────────────────────────────────────────────────────
 
     buildBackground() {
-        this.add.image(400, 300, 'background', 0).setScale(10);
+        if (!this.anims.exists('bg-anim')) {
+            this.anims.create({
+                key: 'bg-anim',
+                frames: this.anims.generateFrameNumbers('background', { start: 0, end: 3 }),
+                frameRate: 4,
+                repeat: -1
+            });
+        }
+        this.add.sprite(400, 300, 'background').setScale(10).play('bg-anim');
     }
 
     // ─── Title ────────────────────────────────────────────────────────────────
 
     buildTitle() {
         // Subtitle above
-        this.add.text(400, 60, '✦  A  G A M E  A B O U T  E M P A T H Y  ✦', {
+        this._mkText(400, 60, '✦  A  G A M E  A B O U T  E M P A T H Y  ✦', {
             fontSize: '11px',
             fill: '#ffffff',
             fontFamily: 'monospace',
             letterSpacing: 4
-        }).setOrigin(0.5);
+        });
 
         // Main title - BEYOND
-        const beyond = this.add.text(400, 130, 'BEYOND', {
+        this._mkText(400, 130, 'BEYOND', {
             fontSize: '72px',
             fill: '#ffffff',
             fontFamily: 'monospace',
             fontStyle: 'bold'
-        }).setOrigin(0.5);
+        }, { padX: 12, padY: 6 });
 
         // Main title - BARRIERS (with accent color)
-        const barriers = this.add.text(400, 205, 'BARRIERS', {
+        const barriers = this._mkText(400, 205, 'BARRIERS', {
             fontSize: '72px',
             fill: '#44aaff',
             fontFamily: 'monospace',
             fontStyle: 'bold'
-        }).setOrigin(0.5);
+        }, { padX: 12, padY: 6 });
 
         // Subtle glow effect via tweens
         this.tweens.add({
@@ -74,21 +95,21 @@ class TitleScene extends Phaser.Scene {
         });
 
         // Tagline
-        this.add.text(400, 268, 'Step into their shoes.  See through their lens.', {
+        this._mkText(400, 268, 'Step into their shoes.  See through their lens.', {
             fontSize: '13px',
             fill: '#ffffff',
             fontFamily: 'monospace'
-        }).setOrigin(0.5);
+        });
     }
 
     // ─── Character Select ─────────────────────────────────────────────────────
 
     buildCharacterSelect() {
-        this.add.text(400, 310, '— CHOOSE YOUR CHARACTER —', {
+        this._mkText(400, 310, '— CHOOSE YOUR CHARACTER —', {
             fontSize: '12px',
             fill: '#ffffff',
             fontFamily: 'monospace'
-        }).setOrigin(0.5);
+        });
 
         // Anna sprite
         this.annaSprite = this.add.sprite(270, 410, 'anna');
@@ -113,12 +134,12 @@ class TitleScene extends Phaser.Scene {
         this.annaSprite.anims.play('title-anna-walk');
         this.annaGlow = this.annaSprite.postFX.addGlow(0xffdd00, 6, 0, false, 0.1, 16);
 
-        this.annaLabel = this.add.text(270, 450, 'ANNA', {
+        this.annaLabel = this._mkText(270, 450, 'ANNA', {
             fontSize: '14px',
             fill: '#aaddff',
             fontFamily: 'monospace',
             shadow: { offsetX: 2, offsetY: 2, color: '#000000', blur: 4, fill: true }
-        }).setOrigin(0.5);
+        });
 
         // Lu sprite
         this.luSprite = this.add.sprite(530, 410, 'lu');
@@ -145,12 +166,12 @@ class TitleScene extends Phaser.Scene {
         this.luSprite.setFlipX(true);
         this.luGlow = this.luSprite.postFX.addGlow(0xffdd00, 0, 0, false, 0.1, 16);
 
-        this.luLabel = this.add.text(530, 450, 'LU', {
+        this.luLabel = this._mkText(530, 450, 'LU', {
             fontSize: '14px',
             fill: '#445566',
             fontFamily: 'monospace',
             shadow: { offsetX: 2, offsetY: 2, color: '#000000', blur: 4, fill: true }
-        }).setOrigin(0.5);
+        });
 
         // Selection indicator (arrow under selected character)
         this.selector = this.add.text(270, 468, '▲', {
@@ -195,11 +216,11 @@ class TitleScene extends Phaser.Scene {
     // ─── Start Prompt ─────────────────────────────────────────────────────────
 
     buildStartPrompt() {
-        this.startText = this.add.text(400, 500, 'PRESS  SPACE  TO  START', {
+        this.startText = this._mkText(400, 500, 'PRESS  SPACE  TO  START', {
             fontSize: '16px',
             fill: '#ffff99',
             fontFamily: 'monospace'
-        }).setOrigin(0.5);
+        });
 
         // Blinking effect
         this.tweens.add({
@@ -211,21 +232,21 @@ class TitleScene extends Phaser.Scene {
             ease: 'Linear'
         });
 
-        this.add.text(400, 530, '← → or click to switch character', {
+        this._mkText(400, 530, '← → or click to switch character', {
             fontSize: '11px',
             fill: '#ffffff',
             fontFamily: 'monospace'
-        }).setOrigin(0.5);
+        });
     }
 
     // ─── Credits ──────────────────────────────────────────────────────────────
 
     buildCredits() {
-        this.add.text(400, 570, 'By Luis Gonzalez & Anna Belenko  ·  The Three Lives  ·  Prof. Goetz', {
+        this._mkText(400, 570, 'By Luis Gonzalez & Anna Belenko  ·  The Three Lives  ·  Prof. Goetz', {
             fontSize: '10px',
             fill: '#ffffff',
             fontFamily: 'monospace'
-        }).setOrigin(0.5);
+        });
     }
 
     // ─── Controls ─────────────────────────────────────────────────────────────

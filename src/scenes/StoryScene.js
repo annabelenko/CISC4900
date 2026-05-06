@@ -84,12 +84,27 @@ class StoryScene extends Phaser.Scene {
         const url = URL.createObjectURL(blob);
         this.audio = new Audio(url);
 
+        // Fallback: if audio metadata doesn't load within 3s, start typing anyway
+        const fallbackTimer = setTimeout(() => {
+            if (!this.typingDone && this.typingTimer.paused) {
+                this.typingTimer.paused = false;
+            }
+        }, 3000);
+
         this.audio.addEventListener('loadedmetadata', () => {
+            clearTimeout(fallbackTimer);
             const duration = this.audio.duration; // in seconds
             const msPerChar = (duration * 1000 * 0.765) / this.fullText.length;
             this.typingTimer.delay = Math.max(30, msPerChar);
             this.typingTimer.paused = false;
             this.audio.play().catch(e => console.warn('Audio play failed:', e));
+        });
+
+        this.audio.addEventListener('error', () => {
+            clearTimeout(fallbackTimer);
+            if (!this.typingDone && this.typingTimer.paused) {
+                this.typingTimer.paused = false;
+            }
         });
     }
 
@@ -100,12 +115,21 @@ class StoryScene extends Phaser.Scene {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ text })
             });
-            if (!res.ok) return;
+            if (!res.ok) {
+                this.typingTimer.paused = false;
+                return;
+            }
+            const contentType = res.headers.get('content-type') || '';
+            if (!contentType.includes('audio')) {
+                this.typingTimer.paused = false;
+                return;
+            }
             const blob = await res.blob();
             this.audioBlob = blob;
             this.playAudio(blob);
         } catch (e) {
             console.warn('TTS unavailable:', e);
+            this.typingTimer.paused = false;
         }
     }
 
