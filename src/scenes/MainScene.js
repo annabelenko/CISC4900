@@ -146,11 +146,7 @@ class MainScene extends Phaser.Scene {
         // End game button
         this.pauseEndBtn = this.add.rectangle(400, 345, 200, 36, 0x882222)
             .setDepth(depth + 2).setVisible(false).setInteractive({ useHandCursor: true })
-            .on('pointerdown', () => this.scene.start('GameOverScene', {
-                score: this.gameState.score,
-                choices: this.gameState.choices,
-                character: this.currentCharacter
-            }))
+            .on('pointerdown', () => this.scene.start('TitleScene'))
             .on('pointerover', function() { this.setFillStyle(0xcc3333); })
             .on('pointerout',  function() { this.setFillStyle(0x882222); });
         this.pauseEndText = this.add.text(400, 345, 'End Game', {

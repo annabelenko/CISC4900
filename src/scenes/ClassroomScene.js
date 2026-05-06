@@ -6,12 +6,16 @@ class ClassroomScene extends Phaser.Scene {
     preload() {
         this.load.atlas('anna', 'assets/anna.png', 'assets/anna.json');
         this.load.atlas('lu', 'assets/lu.png', 'assets/lu.json');
+        this.load.atlas('bg-classroom', 'assets/background.png', 'assets/background.json');
 
         this.load.on('filecomplete-atlas-anna', () => {
             this.textures.get('anna').setFilter(Phaser.Textures.FilterMode.NEAREST);
         });
         this.load.on('filecomplete-atlas-lu', () => {
             this.textures.get('lu').setFilter(Phaser.Textures.FilterMode.NEAREST);
+        });
+        this.load.on('filecomplete-atlas-bg-classroom', () => {
+            this.textures.get('bg-classroom').setFilter(Phaser.Textures.FilterMode.NEAREST);
         });
     }
 
@@ -59,77 +63,24 @@ class ClassroomScene extends Phaser.Scene {
     // ─── Background ───────────────────────────────────────────────────────────
 
     buildBackground() {
-        const g = this.add.graphics();
-
-        // Ceiling
-        g.fillStyle(0x2a1a0e, 1);
-        g.fillRect(0, 0, 800, 80);
-
-        // Walls - warm classroom color
-        g.fillStyle(0x3d2b1f, 1);
-        g.fillRect(0, 80, 800, 420);
-
-        // Floor
-        g.fillStyle(0x2a1a0a, 1);
-        g.fillRect(0, 500, 800, 100);
-
-        // Wall detail lines
-        g.lineStyle(1, 0x4a3828, 1);
-        for (let y = 100; y < 500; y += 40) {
-            g.lineBetween(0, y, 800, y);
-        }
-        for (let x = 0; x < 800; x += 80) {
-            g.lineBetween(x, 80, x, 500);
+        if (!this.anims.exists('bg-classroom-anim')) {
+            this.anims.create({
+                key: 'bg-classroom-anim',
+                frames: [
+                    { key: 'bg-classroom', frame: 'Sprite-0002 0.' },
+                    { key: 'bg-classroom', frame: 'Sprite-0002 1.' },
+                    { key: 'bg-classroom', frame: 'Sprite-0002 2.' },
+                    { key: 'bg-classroom', frame: 'Sprite-0002 3.' }
+                ],
+                frameRate: 4,
+                repeat: -1
+            });
         }
 
-        // Chalkboard on the right wall
-        g.fillStyle(0x1a3322, 1);
-        g.fillRect(540, 100, 240, 150);
-        g.lineStyle(3, 0x8B7355, 1);
-        g.strokeRect(540, 100, 240, 150);
-
-        // Chalkboard text
-        this.add.text(660, 130, 'DISABILITY\nSTUDIES 101', {
-            fontSize: '16px',
-            fill: '#aaffaa',
-            fontFamily: 'monospace',
-            align: 'center'
-        }).setOrigin(0.5);
-
-        this.add.text(660, 195, '[ Accommodations\n  Matter ]', {
-            fontSize: '12px',
-            fill: '#88cc88',
-            fontFamily: 'monospace',
-            align: 'center'
-        }).setOrigin(0.5);
-
-        // Professor's desk
-        const g2 = this.add.graphics();
-        g2.fillStyle(0x5c3d1a, 1);
-        g2.fillRect(560, 430, 180, 20);
-        g2.fillStyle(0x4a2e0f, 1);
-        g2.fillRect(570, 450, 20, 50);
-        g2.fillRect(720, 450, 20, 50);
-
-        this.add.text(645, 415, "PROFESSOR'S DESK", {
-            fontSize: '10px',
-            fill: '#aa8855',
-            fontFamily: 'monospace'
-        }).setOrigin(0.5);
-
-        // Window on the left
-        g2.fillStyle(0x87ceeb, 0.3);
-        g2.fillRect(40, 110, 120, 90);
-        g2.lineStyle(2, 0x8B7355, 1);
-        g2.strokeRect(40, 110, 120, 90);
-        g2.lineBetween(100, 110, 100, 200);
-        g2.lineBetween(40, 155, 160, 155);
-
-        this.add.text(100, 215, 'WINDOW', {
-            fontSize: '10px',
-            fill: '#aa8855',
-            fontFamily: 'monospace'
-        }).setOrigin(0.5);
+        this.bgSprite = this.add.sprite(400, 300, 'bg-classroom', 'Sprite-0002 0.')
+            .setScale(10)
+            .setDepth(0);
+        this.bgSprite.play('bg-classroom-anim');
     }
 
     // ─── Platforms ────────────────────────────────────────────────────────────

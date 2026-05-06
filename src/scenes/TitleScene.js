@@ -4,7 +4,7 @@ class TitleScene extends Phaser.Scene {
     }
 
     preload() {
-        this.load.image('background', 'assets/background.png');
+        this.load.spritesheet('background', 'assets/background.png', { frameWidth: 80, frameHeight: 60 });
         this.load.atlas('anna', 'assets/anna.png', 'assets/anna.json');
         this.load.atlas('lu', 'assets/lu.png', 'assets/lu.json');
 
@@ -13,6 +13,9 @@ class TitleScene extends Phaser.Scene {
         });
         this.load.on('filecomplete-atlas-lu', () => {
             this.textures.get('lu').setFilter(Phaser.Textures.FilterMode.NEAREST);
+        });
+        this.load.on('filecomplete-spritesheet-background', () => {
+            this.textures.get('background').setFilter(Phaser.Textures.FilterMode.NEAREST);
         });
     }
 
@@ -30,10 +33,7 @@ class TitleScene extends Phaser.Scene {
     // ─── Background ───────────────────────────────────────────────────────────
 
     buildBackground() {
-        this.add.image(400, 300, 'background');
-        const overlay = this.add.graphics();
-        overlay.fillStyle(0x000000, 0.5);
-        overlay.fillRect(0, 0, 800, 600);
+        this.add.image(400, 300, 'background', 0).setScale(10);
     }
 
     // ─── Title ────────────────────────────────────────────────────────────────
