@@ -574,7 +574,7 @@ class MainScene extends Phaser.Scene {
         this._prefetchInProgress = true;
         this._discardPrefetch = false;
         try {
-            const res = await fetch(`http://localhost:8080/api/question?t=${Date.now()}`, { cache: 'no-store' });
+            const res = await fetch(`http://localhost:8080/api/question?scene=main&t=${Date.now()}`, { cache: 'no-store' });
             const data = await res.json();
             // Discard if a direct fetch already claimed this slot
             if (!this._discardPrefetch) {

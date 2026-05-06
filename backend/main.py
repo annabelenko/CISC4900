@@ -23,7 +23,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash-lite", temperature=0.8)
+llm_main = ChatGoogleGenerativeAI(model="gemini-2.5-flash-lite", temperature=0.8)
+llm_classroom = ChatGoogleGenerativeAI(model="gemini-2.5-pro", temperature=0.8)
 
 prompt = ChatPromptTemplate.from_template(
     "You are generating quiz questions for an educational game about disability and inclusion on a college campus.\n"
@@ -45,7 +46,8 @@ prompt = ChatPromptTemplate.from_template(
     "where correct is the 0-based index of the right answer."
 )
 
-chain = prompt | llm
+chain_main = prompt | llm_main
+chain_classroom = prompt | llm_classroom
 
 # ─── RAG: load vector DB (built once by ingest.py) ────────────────────────────
 _CHROMA_DIR = os.path.join(os.path.dirname(__file__), "chroma_db")
@@ -193,8 +195,9 @@ async def text_to_speech(payload: dict):
 
 
 @app.get("/api/question")
-async def get_question():
+async def get_question(scene: str = "main"):
     global last_question_text
+    chain = chain_classroom if scene == "classroom" else chain_main
 
     try:
         data = None
@@ -218,3 +221,7 @@ async def get_question():
         fallback = _pick_fallback(last_question_text)
         last_question_text = fallback.get("question")
         return fallback
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run("main:app", host="0.0.0.0", port=8080, reload=True)
