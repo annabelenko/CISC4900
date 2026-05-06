@@ -8,10 +8,38 @@
 </head>
 <body>
     <div id="game-container">
-        <div id="phaser-game"></div>
+        <div id="phaser-game">
+            <!-- Selectable stats HUD (MainScene) -->
+            <div id="stats-html">
+                <div id="stats-objective"></div>
+                <div id="stats-score">SCORE: 0</div>
+                <div id="stats-anxiety-row">
+                    <span class="stats-lbl">ANXIETY:</span>
+                    <div id="stats-bar-bg"><div id="stats-bar"></div></div>
+                    <span id="stats-pct">0%</span>
+                </div>
+                <div id="stats-feedback">Press H for help</div>
+            </div>
+
+            <!-- Quest bar (MainScene) -->
+            <div id="quest-bar-html">
+                <span id="quest-bar-text"></span>
+            </div>
+
+            <!-- Selectable HTML question overlay (shared by all scenes) -->
+            <div id="question-html">
+                <div id="question-html-panel">
+                    <button id="question-html-close" title="Close">✕</button>
+                    <div id="question-html-text"></div>
+                    <div id="question-html-options"></div>
+                    <div id="question-html-result"></div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.70.0/dist/phaser.min.js"></script>
+    <script src="src/scenes/StoryScene.js"></script>
     <script src="src/scenes/TitleScene.js"></script>
     <script src="src/scenes/MainScene.js"></script>
     <script src="src/scenes/ClassroomScene.js"></script>

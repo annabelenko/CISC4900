@@ -6,12 +6,16 @@ class ClassroomScene extends Phaser.Scene {
     preload() {
         this.load.atlas('anna', 'assets/anna.png', 'assets/anna.json');
         this.load.atlas('lu', 'assets/lu.png', 'assets/lu.json');
+        this.load.atlas('bg-classroom', 'assets/background.png', 'assets/background.json');
 
         this.load.on('filecomplete-atlas-anna', () => {
             this.textures.get('anna').setFilter(Phaser.Textures.FilterMode.NEAREST);
         });
         this.load.on('filecomplete-atlas-lu', () => {
             this.textures.get('lu').setFilter(Phaser.Textures.FilterMode.NEAREST);
+        });
+        this.load.on('filecomplete-atlas-bg-classroom', () => {
+            this.textures.get('bg-classroom').setFilter(Phaser.Textures.FilterMode.NEAREST);
         });
     }
 
@@ -28,7 +32,16 @@ class ClassroomScene extends Phaser.Scene {
         this.currentCharacter = data?.character || 'anna';
         this.isNearProfessor = false;
         this.isChoosing = false;
+        this.isAnswering = false;
+        this.questionsCompleted = 0;
+        this.totalQuestions = 3;
+        this.currentQuestion = null;
+        this.questionCooldown = false;
         this.playerDir = 'right';
+
+        this._prefetchedQuestion = null;
+        this._prefetchInProgress = false;
+        this._discardPrefetch = false;
 
         this.buildBackground();
         this.buildPlatforms();
@@ -36,86 +49,38 @@ class ClassroomScene extends Phaser.Scene {
         this.buildAnimations();
         this.buildProfessor();
         this.buildUI();
+        this.buildQuestionUI();
+        this.buildTokens();
+        this.buildTunnelVision();
         this.setupControls();
         this.setupColliders();
 
         this.player.anims.play(`${this.currentCharacter}-idle`);
+        this.playNarration('Collect three question tokens, then find the professor.');
+        this._prefetchNext();
     }
 
     // ─── Background ───────────────────────────────────────────────────────────
 
     buildBackground() {
-        const g = this.add.graphics();
-
-        // Ceiling
-        g.fillStyle(0x2a1a0e, 1);
-        g.fillRect(0, 0, 800, 80);
-
-        // Walls - warm classroom color
-        g.fillStyle(0x3d2b1f, 1);
-        g.fillRect(0, 80, 800, 420);
-
-        // Floor
-        g.fillStyle(0x2a1a0a, 1);
-        g.fillRect(0, 500, 800, 100);
-
-        // Wall detail lines
-        g.lineStyle(1, 0x4a3828, 1);
-        for (let y = 100; y < 500; y += 40) {
-            g.lineBetween(0, y, 800, y);
-        }
-        for (let x = 0; x < 800; x += 80) {
-            g.lineBetween(x, 80, x, 500);
+        if (!this.anims.exists('bg-classroom-anim')) {
+            this.anims.create({
+                key: 'bg-classroom-anim',
+                frames: [
+                    { key: 'bg-classroom', frame: 'Sprite-0002 0.' },
+                    { key: 'bg-classroom', frame: 'Sprite-0002 1.' },
+                    { key: 'bg-classroom', frame: 'Sprite-0002 2.' },
+                    { key: 'bg-classroom', frame: 'Sprite-0002 3.' }
+                ],
+                frameRate: 4,
+                repeat: -1
+            });
         }
 
-        // Chalkboard on the right wall
-        g.fillStyle(0x1a3322, 1);
-        g.fillRect(540, 100, 240, 150);
-        g.lineStyle(3, 0x8B7355, 1);
-        g.strokeRect(540, 100, 240, 150);
-
-        // Chalkboard text
-        this.add.text(660, 130, 'DISABILITY\nSTUDIES 101', {
-            fontSize: '16px',
-            fill: '#aaffaa',
-            fontFamily: 'monospace',
-            align: 'center'
-        }).setOrigin(0.5);
-
-        this.add.text(660, 195, '[ Accommodations\n  Matter ]', {
-            fontSize: '12px',
-            fill: '#88cc88',
-            fontFamily: 'monospace',
-            align: 'center'
-        }).setOrigin(0.5);
-
-        // Professor's desk
-        const g2 = this.add.graphics();
-        g2.fillStyle(0x5c3d1a, 1);
-        g2.fillRect(560, 430, 180, 20);
-        g2.fillStyle(0x4a2e0f, 1);
-        g2.fillRect(570, 450, 20, 50);
-        g2.fillRect(720, 450, 20, 50);
-
-        this.add.text(645, 415, "PROFESSOR'S DESK", {
-            fontSize: '10px',
-            fill: '#aa8855',
-            fontFamily: 'monospace'
-        }).setOrigin(0.5);
-
-        // Window on the left
-        g2.fillStyle(0x87ceeb, 0.3);
-        g2.fillRect(40, 110, 120, 90);
-        g2.lineStyle(2, 0x8B7355, 1);
-        g2.strokeRect(40, 110, 120, 90);
-        g2.lineBetween(100, 110, 100, 200);
-        g2.lineBetween(40, 155, 160, 155);
-
-        this.add.text(100, 215, 'WINDOW', {
-            fontSize: '10px',
-            fill: '#aa8855',
-            fontFamily: 'monospace'
-        }).setOrigin(0.5);
+        this.bgSprite = this.add.sprite(400, 300, 'bg-classroom', 'Sprite-0002 0.')
+            .setScale(10)
+            .setDepth(0);
+        this.bgSprite.play('bg-classroom-anim');
     }
 
     // ─── Platforms ────────────────────────────────────────────────────────────
@@ -307,10 +272,12 @@ class ClassroomScene extends Phaser.Scene {
         this.oneKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ONE);
         this.twoKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.TWO);
         this.threeKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.THREE);
+        this.fourKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.FOUR);
     }
 
     setupColliders() {
         this.physics.add.collider(this.player, this.platforms);
+        this.physics.add.overlap(this.player, this.tokens, (player, token) => this.collectToken(player, token));
     }
 
     // ─── Update ───────────────────────────────────────────────────────────────
@@ -319,6 +286,8 @@ class ClassroomScene extends Phaser.Scene {
         this.handleMovement();
         this.handleProfessorInteraction();
         this.handleChoices();
+        this.handleQuestionInput();
+        this.updateTunnelVision();
         this.updateUI();
     }
 
@@ -375,13 +344,17 @@ class ClassroomScene extends Phaser.Scene {
 
         if (dist < 100) {
             this.isNearProfessor = true;
-            this.interactText.setText('[ Press E to talk to professor ]');
+            if (this.questionsCompleted >= this.totalQuestions) {
+                this.interactText.setText('[ Press E to talk to professor ]');
+            } else {
+                this.interactText.setText(`Collect all ${this.totalQuestions} question tokens first!`);
+            }
         } else {
             this.isNearProfessor = false;
             this.interactText.setText('');
         }
 
-        if (this.isNearProfessor && Phaser.Input.Keyboard.JustDown(this.interactKey)) {
+        if (this.isNearProfessor && this.questionsCompleted >= this.totalQuestions && Phaser.Input.Keyboard.JustDown(this.interactKey)) {
             this.openChoiceMenu();
         }
 
@@ -467,5 +440,278 @@ class ClassroomScene extends Phaser.Scene {
         this.anxietyBar.width = barWidth;
         this.anxietyBar.setFillStyle(this.gameState.anxiety < 50 ? 0xffaa00 : 0xff2222);
         this.anxietyLabel.setText(`${this.gameState.anxiety}%`);
+    }
+
+    // ─── Tunnel Vision ────────────────────────────────────────────────────────
+
+    buildTunnelVision() {
+        this.tunnelDark = this.add.graphics().setDepth(500);
+        this.tunnelMask = this.make.graphics({ add: false });
+        const mask = new Phaser.Display.Masks.GeometryMask(this, this.tunnelMask);
+        mask.invertAlpha = true;
+        this.tunnelDark.setMask(mask);
+    }
+
+    updateTunnelVision() {
+        if (this.isAnswering || this.isChoosing) {
+            this.tunnelDark.setVisible(false);
+            return;
+        }
+        this.tunnelDark.setVisible(true);
+        this.tunnelDark.clear();
+        this.tunnelDark.fillStyle(0x000000, 0.88);
+        this.tunnelDark.fillRect(0, 0, 800, 600);
+        this.tunnelMask.clear();
+        this.tunnelMask.fillStyle(0xffffff, 1);
+        this.tunnelMask.fillCircle(this.player.x, this.player.y, 70);
+    }
+
+    // ─── Tokens ───────────────────────────────────────────────────────────────
+
+    buildTokens() {
+        this.tokens = this.physics.add.staticGroup();
+
+        const positions = [
+            { x: 150, y: 395 },
+            { x: 300, y: 295 },
+            { x: 420, y: 480 },
+        ];
+
+        positions.forEach((pos, i) => {
+            const token = this.add.circle(pos.x, pos.y, 10, 0x00ccff);
+            token.setDepth(10);
+            this.physics.add.existing(token, true);
+            this.tokens.add(token);
+
+            const label = this.add.text(pos.x, pos.y - 18, '?', {
+                fontSize: '14px', fill: '#ffffff', fontFamily: 'monospace'
+            }).setOrigin(0.5).setDepth(11);
+            token.label = label;
+
+            this.tweens.add({
+                targets: [token, label],
+                y: '-=6',
+                duration: 800,
+                yoyo: true,
+                repeat: -1,
+                ease: 'Sine.easeInOut'
+            });
+        });
+
+        this.questText = this.add.text(20, 104, `Collect questions: 0 / ${this.totalQuestions}`, {
+            fontSize: '13px', fill: '#aaddff', fontFamily: 'monospace'
+        }).setDepth(10);
+    }
+
+    // ─── Question UI ──────────────────────────────────────────────────────────
+
+    buildQuestionUI() {
+        this._qOverlay = document.getElementById('question-html');
+        this._qText    = document.getElementById('question-html-text');
+        this._qOptions = document.getElementById('question-html-options');
+        this._qResult  = document.getElementById('question-html-result');
+    }
+
+    // ─── Token Collection & Questions ─────────────────────────────────────────
+
+    collectToken(player, token) {
+        if (this.isAnswering) return;
+        this._pendingTokenPos = { x: token.x, y: token.y };
+        if (token.label) token.label.destroy();
+        if (token._tween) token._tween.stop();
+        token.destroy();
+        this.isAnswering = true;
+        this.player.body.setVelocity(0, 0);
+        this.fetchQuestion();
+    }
+
+    _spawnToken(x, y) {
+        const token = this.add.circle(x, y, 10, 0x00ccff);
+        token.setDepth(10);
+        this.physics.add.existing(token, true);
+        this.tokens.add(token);
+        const label = this.add.text(x, y - 18, '?', {
+            fontSize: '14px', fill: '#ffffff', fontFamily: 'monospace'
+        }).setOrigin(0.5).setDepth(11);
+        token.label = label;
+        token._tween = this.tweens.add({
+            targets: [token, label],
+            y: '-=6', duration: 800, yoyo: true, repeat: -1, ease: 'Sine.easeInOut'
+        });
+    }
+
+    async _prefetchNext() {
+        if (this._prefetchInProgress || this._prefetchedQuestion) return;
+        this._prefetchInProgress = true;
+        this._discardPrefetch = false;
+        try {
+            const res = await fetch(`http://localhost:8080/api/question?t=${Date.now()}`, { cache: 'no-store' });
+            const data = await res.json();
+            if (!this._discardPrefetch) {
+                this._prefetchedQuestion = data;
+            }
+        } catch (e) {
+            // silently ignore
+        } finally {
+            this._prefetchInProgress = false;
+            this._discardPrefetch = false;
+        }
+    }
+
+    async fetchQuestion() {
+        this._fetchCancelled = false;
+        if (this._prefetchedQuestion) {
+            const data = this._prefetchedQuestion;
+            this._prefetchedQuestion = null;
+            this.currentQuestion = data;
+            this.showQuestion(data);
+            return;
+        }
+        this._discardPrefetch = true;
+        this.showQuestionLoading();
+        try {
+            const res = await fetch(`http://localhost:8080/api/question?t=${Date.now()}`, { cache: 'no-store' });
+            const data = await res.json();
+            if (this._fetchCancelled) return;
+            this.currentQuestion = data;
+            this.showQuestion(data);
+        } catch (e) {
+            if (this._fetchCancelled) return;
+            const fallbacks = [
+                { question: 'What is an accommodation in an educational setting?', options: ['Extra homework', 'Adjustments that support equal access', 'A different grade scale', 'Optional attendance'], correct: 1 },
+                { question: 'Which document helps students get classroom accommodations?', options: ['A doctor\'s prescription', 'A disability services letter', 'A parent permission slip', 'A teacher\'s note'], correct: 1 },
+                { question: 'What does "inclusive education" mean?', options: ['Only gifted students', 'All students learn together with support', 'Separate classrooms for disabilities', 'Online-only learning'], correct: 1 },
+            ];
+            const q = fallbacks[Math.floor(Math.random() * fallbacks.length)];
+            this.currentQuestion = q;
+            this.showQuestion(q);
+        }
+    }
+
+    showQuestionLoading() {
+        this._qText.textContent = 'Loading question...';
+        this._qOptions.innerHTML = '';
+        this._qResult.textContent = '';
+        this._qResult.className = '';
+        this._questionAnswered = false;
+        const closeBtn = document.getElementById('question-html-close');
+        closeBtn.disabled = false;
+        closeBtn.style.opacity = '1';
+        closeBtn.onclick = () => this._onQuestionClose();
+        this._qOverlay.style.display = 'flex';
+    }
+
+    showQuestion(data) {
+        this._qText.textContent = data.question;
+        this._qOptions.innerHTML = '';
+        data.options.forEach((opt, i) => {
+            const div = document.createElement('div');
+            div.className = 'q-option';
+            div.textContent = `${i + 1} — ${opt}`;
+            div.addEventListener('click', () => this.submitAnswer(i));
+            this._qOptions.appendChild(div);
+        });
+        this._qResult.textContent = '';
+        this._qResult.className = '';
+        const closeBtn = document.getElementById('question-html-close');
+        closeBtn.disabled = false;
+        closeBtn.style.opacity = '1';
+        closeBtn.onclick = () => this._onQuestionClose();
+        this._questionAnswered = false;
+        this._qOverlay.style.display = 'flex';
+    }
+
+    _randomTokenPos() {
+        const spots = [
+            { x: 150, y: 395 }, { x: 300, y: 295 }, { x: 420, y: 480 },
+            { x: 80,  y: 510 }, { x: 230, y: 510 }, { x: 400, y: 510 },
+            { x: 150, y: 295 }, { x: 300, y: 395 },
+        ];
+        return spots[Math.floor(Math.random() * spots.length)];
+    }
+
+    _onQuestionClose() {
+        if (this._questionAnswered) {
+            this.closeQuestion();
+        } else {
+            // Not answered (or still loading) — cancel fetch, hide overlay, spawn token at random spot after 5s
+            this._fetchCancelled = true;
+            this._qOverlay.style.display = 'none';
+            this.isAnswering = false;
+            this.currentQuestion = null;
+            this._pendingTokenPos = null;
+            this.time.delayedCall(5000, () => {
+                const pos = this._randomTokenPos();
+                this._spawnToken(pos.x, pos.y);
+            });
+        }
+    }
+
+    submitAnswer(i) {
+        if (!this.isAnswering || !this.currentQuestion || this.questionCooldown) return;
+        this._questionAnswered = true;
+        const correct = i === this.currentQuestion.correct;
+        if (correct) {
+            this.gameState.score += 50;
+            this._qResult.textContent = 'Correct! +50 points';
+            this._qResult.className = 'correct';
+        } else {
+            this.gameState.anxiety = Math.min(100, this.gameState.anxiety + 15);
+            this._qResult.textContent = 'Wrong! Anxiety +15%';
+            this._qResult.className = 'wrong';
+            const opts = this._qOptions.querySelectorAll('.q-option');
+            if (opts[this.currentQuestion.correct]) {
+                opts[this.currentQuestion.correct].classList.add('correct-highlight');
+            }
+        }
+        this.questionCooldown = true;
+        this.time.delayedCall(1500, () => this.closeQuestion());
+        this.checkAnxiety();
+    }
+
+    handleQuestionInput() {
+        if (!this.isAnswering || !this.currentQuestion) return;
+        if (this.questionCooldown) return;
+        const keys = [this.oneKey, this.twoKey, this.threeKey, this.fourKey];
+        for (let i = 0; i < keys.length; i++) {
+            if (Phaser.Input.Keyboard.JustDown(keys[i])) {
+                this.submitAnswer(i);
+                break;
+            }
+        }
+    }
+
+    closeQuestion() {
+        this.isAnswering = false;
+        this.currentQuestion = null;
+        this.questionCooldown = false;
+        this._qOverlay.style.display = 'none';
+
+        this.questionsCompleted++;
+        this.questText.setText(`Collect questions: ${this.questionsCompleted} / ${this.totalQuestions}`);
+
+        if (this.questionsCompleted >= this.totalQuestions) {
+            this.questText.setText('All done! Now find the professor. ✔').setStyle({ fill: '#44ff88' });
+            this.playNarration('All done! Now find the professor.');
+        }
+
+        this._prefetchNext();
+    }
+
+    // ─── TTS Narration ────────────────────────────────────────────────────────
+
+    async playNarration(text) {
+        try {
+            const res = await fetch('http://localhost:8080/api/tts', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text })
+            });
+            if (!res.ok) return;
+            const blob = await res.blob();
+            const url = URL.createObjectURL(blob);
+            this.narrationAudio = new Audio(url);
+            this.narrationAudio.play().catch(() => {});
+        } catch (e) {}
     }
 }

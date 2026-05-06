@@ -4,6 +4,7 @@ class TitleScene extends Phaser.Scene {
     }
 
     preload() {
+        this.load.spritesheet('background', 'assets/background.png', { frameWidth: 80, frameHeight: 60 });
         this.load.atlas('anna', 'assets/anna.png', 'assets/anna.json');
         this.load.atlas('lu', 'assets/lu.png', 'assets/lu.json');
 
@@ -12,6 +13,9 @@ class TitleScene extends Phaser.Scene {
         });
         this.load.on('filecomplete-atlas-lu', () => {
             this.textures.get('lu').setFilter(Phaser.Textures.FilterMode.NEAREST);
+        });
+        this.load.on('filecomplete-spritesheet-background', () => {
+            this.textures.get('background').setFilter(Phaser.Textures.FilterMode.NEAREST);
         });
     }
 
@@ -29,41 +33,7 @@ class TitleScene extends Phaser.Scene {
     // ─── Background ───────────────────────────────────────────────────────────
 
     buildBackground() {
-        const g = this.add.graphics();
-
-        // Deep dark background
-        g.fillStyle(0x0a0a14, 1);
-        g.fillRect(0, 0, 800, 600);
-
-        // Subtle grid
-        g.lineStyle(1, 0x111122, 1);
-        for (let y = 0; y < 600; y += 32) {
-            g.lineBetween(0, y, 800, y);
-        }
-        for (let x = 0; x < 800; x += 32) {
-            g.lineBetween(x, 0, x, 600);
-        }
-
-        // Glowing floor line
-        g.fillStyle(0x1a3a6a, 1);
-        g.fillRect(0, 520, 800, 4);
-        g.fillStyle(0x0d1d35, 1);
-        g.fillRect(0, 524, 800, 76);
-
-        // Decorative corner brackets
-        g.lineStyle(2, 0x334466, 1);
-        // Top left
-        g.lineBetween(20, 20, 60, 20);
-        g.lineBetween(20, 20, 20, 60);
-        // Top right
-        g.lineBetween(780, 20, 740, 20);
-        g.lineBetween(780, 20, 780, 60);
-        // Bottom left
-        g.lineBetween(20, 580, 60, 580);
-        g.lineBetween(20, 580, 20, 540);
-        // Bottom right
-        g.lineBetween(780, 580, 740, 580);
-        g.lineBetween(780, 580, 780, 540);
+        this.add.image(400, 300, 'background', 0).setScale(10);
     }
 
     // ─── Title ────────────────────────────────────────────────────────────────
@@ -72,7 +42,7 @@ class TitleScene extends Phaser.Scene {
         // Subtitle above
         this.add.text(400, 60, '✦  A  G A M E  A B O U T  E M P A T H Y  ✦', {
             fontSize: '11px',
-            fill: '#556688',
+            fill: '#ffffff',
             fontFamily: 'monospace',
             letterSpacing: 4
         }).setOrigin(0.5);
@@ -106,7 +76,7 @@ class TitleScene extends Phaser.Scene {
         // Tagline
         this.add.text(400, 268, 'Step into their shoes.  See through their lens.', {
             fontSize: '13px',
-            fill: '#778899',
+            fill: '#ffffff',
             fontFamily: 'monospace'
         }).setOrigin(0.5);
     }
@@ -116,7 +86,7 @@ class TitleScene extends Phaser.Scene {
     buildCharacterSelect() {
         this.add.text(400, 310, '— CHOOSE YOUR CHARACTER —', {
             fontSize: '12px',
-            fill: '#445566',
+            fill: '#ffffff',
             fontFamily: 'monospace'
         }).setOrigin(0.5);
 
@@ -141,11 +111,13 @@ class TitleScene extends Phaser.Scene {
             });
         }
         this.annaSprite.anims.play('title-anna-walk');
+        this.annaGlow = this.annaSprite.postFX.addGlow(0xffdd00, 6, 0, false, 0.1, 16);
 
         this.annaLabel = this.add.text(270, 450, 'ANNA', {
             fontSize: '14px',
             fill: '#aaddff',
-            fontFamily: 'monospace'
+            fontFamily: 'monospace',
+            shadow: { offsetX: 2, offsetY: 2, color: '#000000', blur: 4, fill: true }
         }).setOrigin(0.5);
 
         // Lu sprite
@@ -171,11 +143,13 @@ class TitleScene extends Phaser.Scene {
         }
         this.luSprite.anims.play('title-lu-walk');
         this.luSprite.setFlipX(true);
+        this.luGlow = this.luSprite.postFX.addGlow(0xffdd00, 0, 0, false, 0.1, 16);
 
         this.luLabel = this.add.text(530, 450, 'LU', {
             fontSize: '14px',
             fill: '#445566',
-            fontFamily: 'monospace'
+            fontFamily: 'monospace',
+            shadow: { offsetX: 2, offsetY: 2, color: '#000000', blur: 4, fill: true }
         }).setOrigin(0.5);
 
         // Selection indicator (arrow under selected character)
@@ -205,12 +179,16 @@ class TitleScene extends Phaser.Scene {
             this.annaLabel.setFill('#aaddff');
             this.luLabel.setFill('#445566');
             this.selector.setX(270);
+            this.annaGlow.outerStrength = 6;
+            this.luGlow.outerStrength = 0;
         } else {
             this.luSprite.setAlpha(1);
             this.annaSprite.setAlpha(0.4);
             this.luLabel.setFill('#aaddff');
             this.annaLabel.setFill('#445566');
             this.selector.setX(530);
+            this.luGlow.outerStrength = 6;
+            this.annaGlow.outerStrength = 0;
         }
     }
 
@@ -235,7 +213,7 @@ class TitleScene extends Phaser.Scene {
 
         this.add.text(400, 530, '← → or click to switch character', {
             fontSize: '11px',
-            fill: '#334455',
+            fill: '#ffffff',
             fontFamily: 'monospace'
         }).setOrigin(0.5);
     }
@@ -245,7 +223,7 @@ class TitleScene extends Phaser.Scene {
     buildCredits() {
         this.add.text(400, 570, 'By Luis Gonzalez & Anna Belenko  ·  The Three Lives  ·  Prof. Goetz', {
             fontSize: '10px',
-            fill: '#334455',
+            fill: '#ffffff',
             fontFamily: 'monospace'
         }).setOrigin(0.5);
     }
@@ -256,7 +234,7 @@ class TitleScene extends Phaser.Scene {
         this.input.keyboard.on('keydown-SPACE', () => {
             this.cameras.main.fade(300, 0, 0, 0);
             this.time.delayedCall(300, () => {
-                this.scene.start('MainScene', { character: this.selectedCharacter });
+                this.scene.start('StoryScene', { character: this.selectedCharacter });
             });
         });
     }

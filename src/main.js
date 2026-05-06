@@ -15,7 +15,7 @@ const gameConfig = {
             debug: false
         }
     },
-    scene: [TitleScene, MainScene, ClassroomScene, WinScene, GameOverScene]
+    scene: [TitleScene, StoryScene, MainScene, ClassroomScene, WinScene, GameOverScene]
 };
 
 const game = new Phaser.Game(gameConfig);
