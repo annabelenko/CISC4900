@@ -9,22 +9,13 @@ class StoryScene extends Phaser.Scene {
         this.add.rectangle(400, 300, 800, 600, 0x000000, 1);
 
         this.fullText = [
-            "Congratulations! Your hard work has paid off, and you are officially",
-            "a Computer Science student at one of the country's most prestigious universities.",
-            "",
-            "You were born with peripheral vision loss, meaning the world reaches you",
-            "through a narrow window. You've mastered the art of focus, but today,",
-            "the bustling campus feels like a labyrinth.",
+            "You are a Computer Science student with peripheral vision loss.",
+            "The campus feels like a labyrinth today.",
             "",
             "Your Mission:",
-            "  > 1. Navigate through the crowded courtyard to the Computer Science lecture hall.",
-            "    2. Locate your professor before the first lecture begins.",
-            "    3. Hand over your accommodation letter to ensure you have the tools",
-            "       you need to succeed this semester.",
-            "",
-            "The hallways are narrow, the shadows are long, and the clock is ticking.",
-            "Your education is a right, but today, simply getting to your desk is",
-            "the first challenge.",
+            "  > Navigate to the lecture hall.",
+            "    Find your professor.",
+            "    Deliver your accommodation letter.",
             "",
             "Stay centered. Good luck."
         ].join('\n');
@@ -32,6 +23,8 @@ class StoryScene extends Phaser.Scene {
         this.charIndex = 0;
         this.displayText = '';
         this.typingDone = false;
+        this.audio = null;
+        this.audioBlob = null;
 
         this.storyText = this.add.text(60, 50, '', {
             fontSize: '14px',
@@ -52,26 +45,68 @@ class StoryScene extends Phaser.Scene {
             fontFamily: 'monospace'
         }).setOrigin(0.5).setAlpha(0);
 
-        // Typewriter timer — one character every 28ms
+        // Typewriter timer — starts paused, speed set once audio duration is known
         this.typingTimer = this.time.addEvent({
-            delay: 28,
+            delay: 60,
             callback: this.typeNextChar,
             callbackScope: this,
-            loop: true
+            loop: true,
+            paused: true
         });
+
+        // Fetch and play TTS audio — will sync typing speed to audio
+        this.prefetchSpeech(this.fullText);
 
         this.input.keyboard.on('keydown-SPACE', () => {
             if (!this.typingDone) {
                 // Skip to full text immediately
                 this.typingTimer.remove();
+                if (this.audio) {
+                    this.audio.pause();
+                    this.audio = null;
+                }
                 this.storyText.setText(this.fullText);
                 this.typingDone = true;
                 this.skipText.setAlpha(0);
                 this.showContinuePrompt();
             } else {
+                if (this.audio) {
+                    this.audio.pause();
+                    this.audio = null;
+                }
                 this.scene.start('MainScene', this.characterData);
             }
         });
+    }
+
+    playAudio(blob) {
+        if (this.typingDone) return; // user already skipped, don't play
+        const url = URL.createObjectURL(blob);
+        this.audio = new Audio(url);
+
+        this.audio.addEventListener('loadedmetadata', () => {
+            const duration = this.audio.duration; // in seconds
+            const msPerChar = (duration * 1000 * 0.765) / this.fullText.length;
+            this.typingTimer.delay = Math.max(30, msPerChar);
+            this.typingTimer.paused = false;
+            this.audio.play().catch(e => console.warn('Audio play failed:', e));
+        });
+    }
+
+    async prefetchSpeech(text) {
+        try {
+            const res = await fetch('http://localhost:8080/api/tts', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text })
+            });
+            if (!res.ok) return;
+            const blob = await res.blob();
+            this.audioBlob = blob;
+            this.playAudio(blob);
+        } catch (e) {
+            console.warn('TTS unavailable:', e);
+        }
     }
 
     typeNextChar() {

@@ -111,11 +111,13 @@ class TitleScene extends Phaser.Scene {
             });
         }
         this.annaSprite.anims.play('title-anna-walk');
+        this.annaGlow = this.annaSprite.postFX.addGlow(0xffdd00, 6, 0, false, 0.1, 16);
 
         this.annaLabel = this.add.text(270, 450, 'ANNA', {
             fontSize: '14px',
             fill: '#aaddff',
-            fontFamily: 'monospace'
+            fontFamily: 'monospace',
+            shadow: { offsetX: 2, offsetY: 2, color: '#000000', blur: 4, fill: true }
         }).setOrigin(0.5);
 
         // Lu sprite
@@ -141,11 +143,13 @@ class TitleScene extends Phaser.Scene {
         }
         this.luSprite.anims.play('title-lu-walk');
         this.luSprite.setFlipX(true);
+        this.luGlow = this.luSprite.postFX.addGlow(0xffdd00, 0, 0, false, 0.1, 16);
 
         this.luLabel = this.add.text(530, 450, 'LU', {
             fontSize: '14px',
             fill: '#445566',
-            fontFamily: 'monospace'
+            fontFamily: 'monospace',
+            shadow: { offsetX: 2, offsetY: 2, color: '#000000', blur: 4, fill: true }
         }).setOrigin(0.5);
 
         // Selection indicator (arrow under selected character)
@@ -175,12 +179,16 @@ class TitleScene extends Phaser.Scene {
             this.annaLabel.setFill('#aaddff');
             this.luLabel.setFill('#445566');
             this.selector.setX(270);
+            this.annaGlow.outerStrength = 6;
+            this.luGlow.outerStrength = 0;
         } else {
             this.luSprite.setAlpha(1);
             this.annaSprite.setAlpha(0.4);
             this.luLabel.setFill('#aaddff');
             this.annaLabel.setFill('#445566');
             this.selector.setX(530);
+            this.luGlow.outerStrength = 6;
+            this.annaGlow.outerStrength = 0;
         }
     }
 
