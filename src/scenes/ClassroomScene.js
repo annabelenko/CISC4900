@@ -17,6 +17,10 @@ class ClassroomScene extends Phaser.Scene {
         this.load.on('filecomplete-atlas-bg-classroom', () => {
             this.textures.get('bg-classroom').setFilter(Phaser.Textures.FilterMode.NEAREST);
         });
+
+        this.load.audio('music', 'assets/sounds/menuMusic1.mp3');
+        this.load.audio('jump', 'assets/sounds/jump1.wav');
+        this.load.audio('walk', 'assets/sounds/walking1.wav');
     }
 
     create(data) {
@@ -54,6 +58,17 @@ class ClassroomScene extends Phaser.Scene {
         this.buildTunnelVision();
         this.setupControls();
         this.setupColliders();
+
+        this.musicSound = this.sound.add('music', { loop: true, volume: 0.4 });
+        this.musicSound.play();
+
+        this.jumpSound = this.sound.add('jump', { volume: 0.6 });
+        this.walkSound = this.sound.add('walk', { loop: true, volume: 0.4 });
+
+        this.events.once('shutdown', () => {
+            this.musicSound.stop();
+            this.walkSound.stop();
+        });
 
         this.player.anims.play(`${this.currentCharacter}-idle`);
         this.playNarration('Collect three question tokens, then find the professor.');
