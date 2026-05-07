@@ -28,7 +28,10 @@ class MainScene extends Phaser.Scene {
             score: 0,
             anxiety: 0,
             choices: [],
-            interactionCooldown: false
+            interactionCooldown: false,
+            tokensCollected: 0,
+            tokensRequired: 5,
+            allTokensComplete: false
         };
 
         this.currentCharacter = data?.character || 'anna';
@@ -462,12 +465,25 @@ class MainScene extends Phaser.Scene {
 
     handleGuardInteraction() {
         if (this.isChoosing || this.isAnswering || this.gameState.interactionCooldown) return;
-
+    
+        if (!this.gameState.allTokensComplete) {
+            const dist = Phaser.Math.Distance.Between(
+                this.player.x, this.player.y,
+                this.guard.x, this.guard.y
+            );
+            if (dist < 90) {
+                this.interactText.setText('Answer all ? tokens first!');
+            } else {
+                this.interactText.setText('');
+            }
+            return;
+        }
+    
         const dist = Phaser.Math.Distance.Between(
             this.player.x, this.player.y,
             this.guard.x, this.guard.y
         );
-
+    
         if (dist < 90) {
             this.isNearGuard = true;
             if (this.questionsCompleted < this.totalQuestions) {
@@ -483,7 +499,7 @@ class MainScene extends Phaser.Scene {
         if (this.isNearGuard && this.questionsCompleted >= this.totalQuestions && Phaser.Input.Keyboard.JustDown(this.interactKey)) {
             this.openChoiceMenu();
         }
-
+    
         if (Phaser.Input.Keyboard.JustDown(this.helpKey)) {
             this._domFeedback.textContent = 'HELP: Walk to the guard and press E. Show the right ID!';
         }
