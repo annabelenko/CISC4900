@@ -24,7 +24,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash-lite", temperature=0.8)
+llm = ChatGoogleGenerativeAI(model="gemini-2.5-pro", temperature=0.8)
 
 prompt = ChatPromptTemplate.from_template(
     "You are creating quiz questions for an educational game that teaches players about disability and inclusion. "
