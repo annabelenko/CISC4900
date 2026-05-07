@@ -144,31 +144,58 @@ class MainScene extends Phaser.Scene {
             .setDepth(depth).setVisible(false);
 
         // Panel
-        this.pausePanel = this.add.rectangle(400, 300, 320, 200, 0x111122, 1)
+        this.pausePanel = this.add.rectangle(400, 305, 320, 260, 0x111122, 1)
             .setDepth(depth + 1).setVisible(false)
             .setStrokeStyle(2, 0xaaddff);
 
-        this.pauseTitle = this.add.text(400, 230, 'PAUSED', {
+        this.pauseTitle = this.add.text(400, 208, 'PAUSED', {
             fontSize: '22px', fill: '#ffffff', fontFamily: 'monospace'
         }).setOrigin(0.5).setDepth(depth + 2).setVisible(false);
 
         // Continue button
-        this.pauseContinueBtn = this.add.rectangle(400, 290, 200, 36, 0x224488)
+        this.pauseContinueBtn = this.add.rectangle(400, 260, 200, 36, 0x224488)
             .setDepth(depth + 2).setVisible(false).setInteractive({ useHandCursor: true })
             .on('pointerdown', () => this.resumeGame())
             .on('pointerover', function() { this.setFillStyle(0x3366cc); })
             .on('pointerout',  function() { this.setFillStyle(0x224488); });
-        this.pauseContinueText = this.add.text(400, 290, 'Continue', {
+        this.pauseContinueText = this.add.text(400, 260, 'Continue', {
+            fontSize: '16px', fill: '#ffffff', fontFamily: 'monospace'
+        }).setOrigin(0.5).setDepth(depth + 3).setVisible(false);
+
+        // Volume row
+        this.pauseVolLabel = this.add.text(252, 312, 'MUSIC VOL', {
+            fontSize: '13px', fill: '#aaddff', fontFamily: 'monospace'
+        }).setOrigin(0, 0.5).setDepth(depth + 2).setVisible(false);
+
+        this.pauseVolMinBtn = this.add.rectangle(418, 312, 26, 26, 0x334455)
+            .setDepth(depth + 2).setVisible(false).setInteractive({ useHandCursor: true })
+            .on('pointerdown', () => this._adjustVolume(-0.1))
+            .on('pointerover', function() { this.setFillStyle(0x446677); })
+            .on('pointerout',  function() { this.setFillStyle(0x334455); });
+        this.pauseVolMinText = this.add.text(418, 312, '−', {
+            fontSize: '16px', fill: '#ffffff', fontFamily: 'monospace'
+        }).setOrigin(0.5).setDepth(depth + 3).setVisible(false);
+
+        this.pauseVolText = this.add.text(450, 312, '40%', {
+            fontSize: '13px', fill: '#ffffff', fontFamily: 'monospace'
+        }).setOrigin(0.5).setDepth(depth + 3).setVisible(false);
+
+        this.pauseVolPlusBtn = this.add.rectangle(484, 312, 26, 26, 0x334455)
+            .setDepth(depth + 2).setVisible(false).setInteractive({ useHandCursor: true })
+            .on('pointerdown', () => this._adjustVolume(0.1))
+            .on('pointerover', function() { this.setFillStyle(0x446677); })
+            .on('pointerout',  function() { this.setFillStyle(0x334455); });
+        this.pauseVolPlusText = this.add.text(484, 312, '+', {
             fontSize: '16px', fill: '#ffffff', fontFamily: 'monospace'
         }).setOrigin(0.5).setDepth(depth + 3).setVisible(false);
 
         // End game button
-        this.pauseEndBtn = this.add.rectangle(400, 345, 200, 36, 0x882222)
+        this.pauseEndBtn = this.add.rectangle(400, 366, 200, 36, 0x882222)
             .setDepth(depth + 2).setVisible(false).setInteractive({ useHandCursor: true })
             .on('pointerdown', () => this.scene.start('TitleScene'))
             .on('pointerover', function() { this.setFillStyle(0xcc3333); })
             .on('pointerout',  function() { this.setFillStyle(0x882222); });
-        this.pauseEndText = this.add.text(400, 345, 'End Game', {
+        this.pauseEndText = this.add.text(400, 366, 'End Game', {
             fontSize: '16px', fill: '#ffffff', fontFamily: 'monospace'
         }).setOrigin(0.5).setDepth(depth + 3).setVisible(false);
 
@@ -183,6 +210,12 @@ class MainScene extends Phaser.Scene {
         }).setOrigin(0.5).setDepth(depth + 1);
     }
 
+    _adjustVolume(delta) {
+        const newVol = Math.max(0, Math.min(1, this.musicSound.volume + delta));
+        this.musicSound.setVolume(newVol);
+        this.pauseVolText.setText(`${Math.round(newVol * 100)}%`);
+    }
+
     togglePause() {
         if (this.isPaused) {
             this.resumeGame();
@@ -194,8 +227,11 @@ class MainScene extends Phaser.Scene {
     pauseGame() {
         this.isPaused = true;
         this.player.body.setVelocity(0, 0);
+        this.pauseVolText.setText(`${Math.round(this.musicSound.volume * 100)}%`);
         [this.pauseOverlay, this.pausePanel, this.pauseTitle,
          this.pauseContinueBtn, this.pauseContinueText,
+         this.pauseVolLabel, this.pauseVolMinBtn, this.pauseVolMinText,
+         this.pauseVolText, this.pauseVolPlusBtn, this.pauseVolPlusText,
          this.pauseEndBtn, this.pauseEndText].forEach(o => o.setVisible(true));
     }
 
@@ -203,6 +239,8 @@ class MainScene extends Phaser.Scene {
         this.isPaused = false;
         [this.pauseOverlay, this.pausePanel, this.pauseTitle,
          this.pauseContinueBtn, this.pauseContinueText,
+         this.pauseVolLabel, this.pauseVolMinBtn, this.pauseVolMinText,
+         this.pauseVolText, this.pauseVolPlusBtn, this.pauseVolPlusText,
          this.pauseEndBtn, this.pauseEndText].forEach(o => o.setVisible(false));
     }
 
@@ -570,6 +608,7 @@ class MainScene extends Phaser.Scene {
                 this.scene.start('WinScene', {
                     score: this.gameState.score,
                     choices: this.gameState.choices,
+                    anxiety: this.gameState.anxiety,
                     character: this.currentCharacter
                 });
             });

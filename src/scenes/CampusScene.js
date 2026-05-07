@@ -32,7 +32,7 @@ class CampusScene extends Phaser.Scene {
             level: 2,
             objective: 'Collect all tokens, then find the correct door',
             score: data?.score || 0,
-            anxiety: 0,
+            anxiety: data?.anxiety || 0,
             choices: [],
             interactionCooldown: false,
             allTokensComplete: false
@@ -215,7 +215,7 @@ class CampusScene extends Phaser.Scene {
         this.add.rectangle(728, 474, 8, 8, 0xffd700).setDepth(6); // knob
         this.add.image(740, 420, 'sign-ingersoll')
             .setAngle(-90)
-            .setScale(0.02)
+            .setScale(0.04)
             .setDepth(6);
     }
 
@@ -227,29 +227,56 @@ class CampusScene extends Phaser.Scene {
         this.pauseOverlay = this.add.rectangle(400, 300, 800, 600, 0x000000, 0.75)
             .setDepth(depth).setVisible(false);
 
-        this.pausePanel = this.add.rectangle(400, 300, 320, 200, 0x111122, 1)
+        this.pausePanel = this.add.rectangle(400, 305, 320, 260, 0x111122, 1)
             .setDepth(depth + 1).setVisible(false)
             .setStrokeStyle(2, 0xaaddff);
 
-        this.pauseTitle = this.add.text(400, 230, 'PAUSED', {
+        this.pauseTitle = this.add.text(400, 208, 'PAUSED', {
             fontSize: '22px', fill: '#ffffff', fontFamily: 'monospace'
         }).setOrigin(0.5).setDepth(depth + 2).setVisible(false);
 
-        this.pauseContinueBtn = this.add.rectangle(400, 290, 200, 36, 0x224488)
+        this.pauseContinueBtn = this.add.rectangle(400, 260, 200, 36, 0x224488)
             .setDepth(depth + 2).setVisible(false).setInteractive({ useHandCursor: true })
             .on('pointerdown', () => this.resumeGame())
             .on('pointerover', function() { this.setFillStyle(0x3366cc); })
             .on('pointerout',  function() { this.setFillStyle(0x224488); });
-        this.pauseContinueText = this.add.text(400, 290, 'Continue', {
+        this.pauseContinueText = this.add.text(400, 260, 'Continue', {
             fontSize: '16px', fill: '#ffffff', fontFamily: 'monospace'
         }).setOrigin(0.5).setDepth(depth + 3).setVisible(false);
 
-        this.pauseEndBtn = this.add.rectangle(400, 345, 200, 36, 0x882222)
+        // Volume row
+        this.pauseVolLabel = this.add.text(252, 312, 'MUSIC VOL', {
+            fontSize: '13px', fill: '#aaddff', fontFamily: 'monospace'
+        }).setOrigin(0, 0.5).setDepth(depth + 2).setVisible(false);
+
+        this.pauseVolMinBtn = this.add.rectangle(418, 312, 26, 26, 0x334455)
+            .setDepth(depth + 2).setVisible(false).setInteractive({ useHandCursor: true })
+            .on('pointerdown', () => this._adjustVolume(-0.1))
+            .on('pointerover', function() { this.setFillStyle(0x446677); })
+            .on('pointerout',  function() { this.setFillStyle(0x334455); });
+        this.pauseVolMinText = this.add.text(418, 312, '−', {
+            fontSize: '16px', fill: '#ffffff', fontFamily: 'monospace'
+        }).setOrigin(0.5).setDepth(depth + 3).setVisible(false);
+
+        this.pauseVolText = this.add.text(450, 312, '40%', {
+            fontSize: '13px', fill: '#ffffff', fontFamily: 'monospace'
+        }).setOrigin(0.5).setDepth(depth + 3).setVisible(false);
+
+        this.pauseVolPlusBtn = this.add.rectangle(484, 312, 26, 26, 0x334455)
+            .setDepth(depth + 2).setVisible(false).setInteractive({ useHandCursor: true })
+            .on('pointerdown', () => this._adjustVolume(0.1))
+            .on('pointerover', function() { this.setFillStyle(0x446677); })
+            .on('pointerout',  function() { this.setFillStyle(0x334455); });
+        this.pauseVolPlusText = this.add.text(484, 312, '+', {
+            fontSize: '16px', fill: '#ffffff', fontFamily: 'monospace'
+        }).setOrigin(0.5).setDepth(depth + 3).setVisible(false);
+
+        this.pauseEndBtn = this.add.rectangle(400, 366, 200, 36, 0x882222)
             .setDepth(depth + 2).setVisible(false).setInteractive({ useHandCursor: true })
             .on('pointerdown', () => this.scene.start('TitleScene'))
             .on('pointerover', function() { this.setFillStyle(0xcc3333); })
             .on('pointerout',  function() { this.setFillStyle(0x882222); });
-        this.pauseEndText = this.add.text(400, 345, 'End Game', {
+        this.pauseEndText = this.add.text(400, 366, 'End Game', {
             fontSize: '16px', fill: '#ffffff', fontFamily: 'monospace'
         }).setOrigin(0.5).setDepth(depth + 3).setVisible(false);
 
@@ -263,6 +290,12 @@ class CampusScene extends Phaser.Scene {
         }).setOrigin(0.5).setDepth(depth + 1);
     }
 
+    _adjustVolume(delta) {
+        const newVol = Math.max(0, Math.min(1, this.musicSound.volume + delta));
+        this.musicSound.setVolume(newVol);
+        this.pauseVolText.setText(`${Math.round(newVol * 100)}%`);
+    }
+
     togglePause() {
         if (this.isPaused) {
             this.resumeGame();
@@ -274,8 +307,11 @@ class CampusScene extends Phaser.Scene {
     pauseGame() {
         this.isPaused = true;
         this.player.body.setVelocity(0, 0);
+        this.pauseVolText.setText(`${Math.round(this.musicSound.volume * 100)}%`);
         [this.pauseOverlay, this.pausePanel, this.pauseTitle,
          this.pauseContinueBtn, this.pauseContinueText,
+         this.pauseVolLabel, this.pauseVolMinBtn, this.pauseVolMinText,
+         this.pauseVolText, this.pauseVolPlusBtn, this.pauseVolPlusText,
          this.pauseEndBtn, this.pauseEndText].forEach(o => o.setVisible(true));
     }
 
@@ -283,6 +319,8 @@ class CampusScene extends Phaser.Scene {
         this.isPaused = false;
         [this.pauseOverlay, this.pausePanel, this.pauseTitle,
          this.pauseContinueBtn, this.pauseContinueText,
+         this.pauseVolLabel, this.pauseVolMinBtn, this.pauseVolMinText,
+         this.pauseVolText, this.pauseVolPlusBtn, this.pauseVolPlusText,
          this.pauseEndBtn, this.pauseEndText].forEach(o => o.setVisible(false));
     }
 
@@ -541,6 +579,44 @@ class CampusScene extends Phaser.Scene {
         this._qText    = document.getElementById('question-html-text');
         this._qOptions = document.getElementById('question-html-options');
         this._qResult  = document.getElementById('question-html-result');
+        this._qTimer   = document.getElementById('question-html-timer');
+        this._qTimerBar = document.getElementById('question-html-timer-bar');
+        this._questionTimer = null;
+    }
+
+    _startQuestionTimer() {
+        this._clearQuestionTimer();
+        const TOTAL = 30;
+        let remaining = TOTAL;
+        this._qTimer.textContent = remaining;
+        this._qTimer.className = '';
+        this._qTimer.style.display = 'block';
+        this._qTimerBar.style.width = '100%';
+        this._qTimerBar.style.display = 'block';
+        this._questionTimer = setInterval(() => {
+            remaining--;
+            this._qTimer.textContent = remaining;
+            this._qTimerBar.style.width = `${(remaining / TOTAL) * 100}%`;
+            if (remaining <= 10) this._qTimer.classList.add('urgent');
+            if (remaining <= 0) {
+                this._clearQuestionTimer();
+                this._onQuestionClose();
+            }
+        }, 1000);
+    }
+
+    _clearQuestionTimer() {
+        if (this._questionTimer) {
+            clearInterval(this._questionTimer);
+            this._questionTimer = null;
+        }
+        if (this._qTimer) {
+            this._qTimer.style.display = 'none';
+            this._qTimer.className = '';
+        }
+        if (this._qTimerBar) {
+            this._qTimerBar.style.display = 'none';
+        }
     }
 
     // ─── Token Collection & Questions ─────────────────────────────────────────
@@ -634,6 +710,7 @@ class CampusScene extends Phaser.Scene {
         closeBtn.style.opacity = '1';
         closeBtn.onclick = () => this._onQuestionClose();
         this._qOverlay.style.display = 'flex';
+        this._startQuestionTimer();
     }
 
     showQuestion(data) {
@@ -654,6 +731,7 @@ class CampusScene extends Phaser.Scene {
         closeBtn.onclick = () => this._onQuestionClose();
         this._questionAnswered = false;
         this._qOverlay.style.display = 'flex';
+        if (!this._questionTimer) this._startQuestionTimer();
     }
 
     _randomTokenPos() {
@@ -666,6 +744,7 @@ class CampusScene extends Phaser.Scene {
     }
 
     _onQuestionClose() {
+        this._clearQuestionTimer();
         if (this._questionAnswered) {
             this.closeQuestion();
         } else {
@@ -717,6 +796,7 @@ class CampusScene extends Phaser.Scene {
     }
 
     closeQuestion() {
+        this._clearQuestionTimer();
         this.isAnswering = false;
         this.currentQuestion = null;
         this.questionCooldown = false;

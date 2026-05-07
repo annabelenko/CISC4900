@@ -60,10 +60,11 @@ h1 {
     background: rgba(17, 17, 51, 0.97);
     border: 3px solid #4488ff;
     border-radius: 6px;
-    padding: 28px 28px 22px 28px;
+    padding: 36px 28px 22px 28px;
     font-family: 'Share Tech Mono', monospace;
     user-select: text;
     -webkit-user-select: text;
+    overflow: hidden;
 }
 
 #question-html-close {
@@ -114,6 +115,28 @@ h1 {
 }
 #question-html-result.correct { color: #00ff88; }
 #question-html-result.wrong   { color: #ff4444; }
+
+#question-html-timer-bar {
+    position: absolute;
+    top: 0; left: 0;
+    height: 6px;
+    width: 100%;
+    background: #ff3333;
+    border-radius: 3px 3px 0 0;
+    transform-origin: left center;
+    transition: width 0.9s linear;
+}
+
+#question-html-timer {
+    position: absolute;
+    top: 10px; left: 14px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 16px;
+    color: #ffdd44;
+    min-width: 28px;
+    text-align: left;
+}
+#question-html-timer.urgent { color: #ff4444; }
 
 /* ── Stats HUD overlay (MainScene) ──────────────────────────── */
 #stats-html {

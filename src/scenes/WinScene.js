@@ -70,6 +70,7 @@ class WinScene extends Phaser.Scene {
                 this.scene.start('CampusScene', {
                     score: data.score,
                     choices: data.choices,
+                    anxiety: data.anxiety,
                     character: data.character
                 });
             });
