@@ -9,6 +9,9 @@ class MainScene extends Phaser.Scene {
         this.load.atlas('guard', 'assets/guard.png', 'assets/guard.json');
         this.load.image('ledge', 'assets/ledge.png');
         this.load.image('scene1', 'assets/scene1.png');
+        this.load.audio('jump', 'assets/sounds/jump1.wav');
+        this.load.audio('walk', 'assets/sounds/walking1.wav');
+        this.load.audio('music', 'assets/sounds/menuMusic1.mp3');
 
         this.load.on('filecomplete-atlas-anna', () => {
             this.textures.get('anna').setFilter(Phaser.Textures.FilterMode.NEAREST);
@@ -33,6 +36,14 @@ class MainScene extends Phaser.Scene {
             tokensRequired: 5,
             allTokensComplete: false
         };
+
+        // Start background music
+        this.musicSound = this.sound.add('music', { loop: true, volume: 0.4 });
+        this.musicSound.play();
+
+        // Set up sound effects
+        this.jumpSound = this.sound.add('jump', { volume: 0.6 });
+        this.walkSound = this.sound.add('walk', { loop: true, volume: 0.4 });
 
         this.currentCharacter = data?.character || 'anna';
         this.playerDir = 'right';
@@ -71,6 +82,11 @@ class MainScene extends Phaser.Scene {
 
         // Pre-fetch first question immediately so it's ready
         this._prefetchNext();
+
+        this.events.on('shutdown', () => {
+            this.musicSound.stop();
+            this.walkSound.stop();
+        });
     }
 
     // ─── Narration ────────────────────────────────────────────────────────────
@@ -428,6 +444,22 @@ class MainScene extends Phaser.Scene {
         const isLeft = this.cursors.left.isDown || this.wasd.A.isDown;
         const isRight = this.cursors.right.isDown || this.wasd.D.isDown;
 
+        if (isLeft || isRight) {
+            // walking sound
+            if (onGround && !this.walkSound.isPlaying) {
+                this.walkSound.play();
+            }
+        } else {
+            this.walkSound.stop();
+        }
+        
+        // jump sound
+        if ((this.cursors.up.isDown || this.wasd.W.isDown) && onGround) {
+            this.player.body.setVelocityY(-370);
+            this.player.anims.play(`${char}-jump`);
+            this.jumpSound.play();
+        }
+
         if (isLeft) {
             this.player.body.setVelocityX(-180);
             this.player.setFlipX(true);
@@ -447,10 +479,6 @@ class MainScene extends Phaser.Scene {
             }
         }
 
-        if ((this.cursors.up.isDown || this.wasd.W.isDown) && onGround) {
-            this.player.body.setVelocityY(-370);
-            this.player.anims.play(`${char}-jump`);
-        }
 
         if (this.player.body.velocity.y < 0 && !(this.cursors.up.isDown || this.wasd.W.isDown)) {
             this.player.body.setVelocityY(this.player.body.velocity.y * 0.5);

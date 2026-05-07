@@ -17,6 +17,8 @@ class TitleScene extends Phaser.Scene {
         this.load.on('filecomplete-spritesheet-background', () => {
             this.textures.get('background').setFilter(Phaser.Textures.FilterMode.NEAREST);
         });
+
+        this.load.audio('titleMusic', 'assets/sounds/titleMusic.mp3');
     }
 
     create() {
@@ -28,6 +30,13 @@ class TitleScene extends Phaser.Scene {
         this.buildStartPrompt();
         this.buildCredits();
         this.setupControls();
+
+        this.titleMusic = this.sound.add('titleMusic', { loop: true, volume: 0.4 });
+        this.titleMusic.play();
+
+        this.events.once('shutdown', () => {
+            this.titleMusic.stop();
+        });
     }
 
     // ─── Rounded-bg text helper ──────────────────────────────────────────────
