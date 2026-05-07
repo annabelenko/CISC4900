@@ -29,6 +29,8 @@ Thumbs.db
 backend/venv/
 __pycache__/
 *.pyc
+backend/chroma_db/
+backend/research_text.txt
 
 # Logs
 logs

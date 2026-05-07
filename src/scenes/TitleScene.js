@@ -4,6 +4,7 @@ class TitleScene extends Phaser.Scene {
     }
 
     preload() {
+        this.load.spritesheet('background', 'assets/background.png', { frameWidth: 80, frameHeight: 60 });
         this.load.atlas('anna', 'assets/anna.png', 'assets/anna.json');
         this.load.atlas('lu', 'assets/lu.png', 'assets/lu.json');
 
@@ -13,6 +14,11 @@ class TitleScene extends Phaser.Scene {
         this.load.on('filecomplete-atlas-lu', () => {
             this.textures.get('lu').setFilter(Phaser.Textures.FilterMode.NEAREST);
         });
+        this.load.on('filecomplete-spritesheet-background', () => {
+            this.textures.get('background').setFilter(Phaser.Textures.FilterMode.NEAREST);
+        });
+
+        this.load.audio('titleMusic', 'assets/sounds/titleMusic.mp3');
     }
 
     create() {
@@ -24,74 +30,68 @@ class TitleScene extends Phaser.Scene {
         this.buildStartPrompt();
         this.buildCredits();
         this.setupControls();
+
+        this.titleMusic = this.sound.add('titleMusic', { loop: true, volume: 0.4 });
+        this.titleMusic.play();
+
+        this.events.once('shutdown', () => {
+            this.titleMusic.stop();
+        });
+    }
+
+    // ─── Rounded-bg text helper ──────────────────────────────────────────────
+
+    _mkText(x, y, content, style, { radius = 6, padX = 8, padY = 4 } = {}) {
+        const txt = this.add.text(x, y, content, style).setOrigin(0.5);
+        const w = txt.displayWidth + padX * 2;
+        const h = txt.displayHeight + padY * 2;
+        const bg = this.add.graphics();
+        bg.fillStyle(0x000000, 0.85);
+        bg.fillRoundedRect(x - w / 2, y - h / 2, w, h, radius);
+        this.children.moveBelow(bg, txt);
+        return txt;
     }
 
     // ─── Background ───────────────────────────────────────────────────────────
 
     buildBackground() {
-        const g = this.add.graphics();
-
-        // Deep dark background
-        g.fillStyle(0x0a0a14, 1);
-        g.fillRect(0, 0, 800, 600);
-
-        // Subtle grid
-        g.lineStyle(1, 0x111122, 1);
-        for (let y = 0; y < 600; y += 32) {
-            g.lineBetween(0, y, 800, y);
+        if (!this.anims.exists('bg-anim')) {
+            this.anims.create({
+                key: 'bg-anim',
+                frames: this.anims.generateFrameNumbers('background', { start: 0, end: 3 }),
+                frameRate: 4,
+                repeat: -1
+            });
         }
-        for (let x = 0; x < 800; x += 32) {
-            g.lineBetween(x, 0, x, 600);
-        }
-
-        // Glowing floor line
-        g.fillStyle(0x1a3a6a, 1);
-        g.fillRect(0, 520, 800, 4);
-        g.fillStyle(0x0d1d35, 1);
-        g.fillRect(0, 524, 800, 76);
-
-        // Decorative corner brackets
-        g.lineStyle(2, 0x334466, 1);
-        // Top left
-        g.lineBetween(20, 20, 60, 20);
-        g.lineBetween(20, 20, 20, 60);
-        // Top right
-        g.lineBetween(780, 20, 740, 20);
-        g.lineBetween(780, 20, 780, 60);
-        // Bottom left
-        g.lineBetween(20, 580, 60, 580);
-        g.lineBetween(20, 580, 20, 540);
-        // Bottom right
-        g.lineBetween(780, 580, 740, 580);
-        g.lineBetween(780, 580, 780, 540);
+        this.add.sprite(400, 300, 'background').setScale(10).play('bg-anim');
     }
 
     // ─── Title ────────────────────────────────────────────────────────────────
 
     buildTitle() {
         // Subtitle above
-        this.add.text(400, 60, '✦  A  G A M E  A B O U T  E M P A T H Y  ✦', {
+        this._mkText(400, 60, '✦  A  G A M E  A B O U T  E M P A T H Y  ✦', {
             fontSize: '11px',
-            fill: '#556688',
+            fill: '#ffffff',
             fontFamily: 'monospace',
             letterSpacing: 4
-        }).setOrigin(0.5);
+        });
 
         // Main title - BEYOND
-        const beyond = this.add.text(400, 130, 'BEYOND', {
+        this._mkText(400, 130, 'BEYOND', {
             fontSize: '72px',
             fill: '#ffffff',
             fontFamily: 'monospace',
             fontStyle: 'bold'
-        }).setOrigin(0.5);
+        }, { padX: 12, padY: 6 });
 
         // Main title - BARRIERS (with accent color)
-        const barriers = this.add.text(400, 205, 'BARRIERS', {
+        const barriers = this._mkText(400, 205, 'BARRIERS', {
             fontSize: '72px',
             fill: '#44aaff',
             fontFamily: 'monospace',
             fontStyle: 'bold'
-        }).setOrigin(0.5);
+        }, { padX: 12, padY: 6 });
 
         // Subtle glow effect via tweens
         this.tweens.add({
@@ -104,21 +104,21 @@ class TitleScene extends Phaser.Scene {
         });
 
         // Tagline
-        this.add.text(400, 268, 'Step into their shoes.  See through their lens.', {
+        this._mkText(400, 268, 'Step into their shoes.  See through their lens.', {
             fontSize: '13px',
-            fill: '#778899',
+            fill: '#ffffff',
             fontFamily: 'monospace'
-        }).setOrigin(0.5);
+        });
     }
 
     // ─── Character Select ─────────────────────────────────────────────────────
 
     buildCharacterSelect() {
-        this.add.text(400, 310, '— CHOOSE YOUR CHARACTER —', {
+        this._mkText(400, 310, '— CHOOSE YOUR CHARACTER —', {
             fontSize: '12px',
-            fill: '#445566',
+            fill: '#ffffff',
             fontFamily: 'monospace'
-        }).setOrigin(0.5);
+        });
 
         // Anna sprite
         this.annaSprite = this.add.sprite(270, 410, 'anna');
@@ -141,12 +141,14 @@ class TitleScene extends Phaser.Scene {
             });
         }
         this.annaSprite.anims.play('title-anna-walk');
+        this.annaGlow = this.annaSprite.postFX.addGlow(0xffdd00, 6, 0, false, 0.1, 16);
 
-        this.annaLabel = this.add.text(270, 450, 'ANNA', {
+        this.annaLabel = this._mkText(270, 450, 'ANNA', {
             fontSize: '14px',
             fill: '#aaddff',
-            fontFamily: 'monospace'
-        }).setOrigin(0.5);
+            fontFamily: 'monospace',
+            shadow: { offsetX: 2, offsetY: 2, color: '#000000', blur: 4, fill: true }
+        });
 
         // Lu sprite
         this.luSprite = this.add.sprite(530, 410, 'lu');
@@ -171,12 +173,14 @@ class TitleScene extends Phaser.Scene {
         }
         this.luSprite.anims.play('title-lu-walk');
         this.luSprite.setFlipX(true);
+        this.luGlow = this.luSprite.postFX.addGlow(0xffdd00, 0, 0, false, 0.1, 16);
 
-        this.luLabel = this.add.text(530, 450, 'LU', {
+        this.luLabel = this._mkText(530, 450, 'LU', {
             fontSize: '14px',
             fill: '#445566',
-            fontFamily: 'monospace'
-        }).setOrigin(0.5);
+            fontFamily: 'monospace',
+            shadow: { offsetX: 2, offsetY: 2, color: '#000000', blur: 4, fill: true }
+        });
 
         // Selection indicator (arrow under selected character)
         this.selector = this.add.text(270, 468, '▲', {
@@ -205,23 +209,27 @@ class TitleScene extends Phaser.Scene {
             this.annaLabel.setFill('#aaddff');
             this.luLabel.setFill('#445566');
             this.selector.setX(270);
+            this.annaGlow.outerStrength = 6;
+            this.luGlow.outerStrength = 0;
         } else {
             this.luSprite.setAlpha(1);
             this.annaSprite.setAlpha(0.4);
             this.luLabel.setFill('#aaddff');
             this.annaLabel.setFill('#445566');
             this.selector.setX(530);
+            this.luGlow.outerStrength = 6;
+            this.annaGlow.outerStrength = 0;
         }
     }
 
     // ─── Start Prompt ─────────────────────────────────────────────────────────
 
     buildStartPrompt() {
-        this.startText = this.add.text(400, 500, 'PRESS  SPACE  TO  START', {
+        this.startText = this._mkText(400, 500, 'PRESS  SPACE  TO  START', {
             fontSize: '16px',
             fill: '#ffff99',
             fontFamily: 'monospace'
-        }).setOrigin(0.5);
+        });
 
         // Blinking effect
         this.tweens.add({
@@ -233,21 +241,21 @@ class TitleScene extends Phaser.Scene {
             ease: 'Linear'
         });
 
-        this.add.text(400, 530, '← → or click to switch character', {
+        this._mkText(400, 530, '← → or click to switch character', {
             fontSize: '11px',
-            fill: '#334455',
+            fill: '#ffffff',
             fontFamily: 'monospace'
-        }).setOrigin(0.5);
+        });
     }
 
     // ─── Credits ──────────────────────────────────────────────────────────────
 
     buildCredits() {
-        this.add.text(400, 570, 'By Luis Gonzalez & Anna Belenko  ·  The Three Lives  ·  Prof. Goetz', {
+        this._mkText(400, 570, 'By Luis Gonzalez & Anna Belenko  ·  The Three Lives  ·  Prof. Goetz', {
             fontSize: '10px',
-            fill: '#334455',
+            fill: '#ffffff',
             fontFamily: 'monospace'
-        }).setOrigin(0.5);
+        });
     }
 
     // ─── Controls ─────────────────────────────────────────────────────────────
@@ -256,7 +264,7 @@ class TitleScene extends Phaser.Scene {
         this.input.keyboard.on('keydown-SPACE', () => {
             this.cameras.main.fade(300, 0, 0, 0);
             this.time.delayedCall(300, () => {
-                this.scene.start('MainScene', { character: this.selectedCharacter });
+                this.scene.start('StoryScene', { character: this.selectedCharacter });
             });
         });
     }
