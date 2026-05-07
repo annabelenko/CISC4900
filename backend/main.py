@@ -1,3 +1,4 @@
+import asyncio
 import json
 import os
 import random
@@ -23,35 +24,35 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-llm_main = ChatGoogleGenerativeAI(model="gemini-2.5-flash-lite", temperature=0.8)
-llm_classroom = ChatGoogleGenerativeAI(model="gemini-2.5-pro", temperature=0.8)
+llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash-lite", temperature=0.8)
 
 prompt = ChatPromptTemplate.from_template(
-    "You are generating quiz questions for an educational game about disability and inclusion on a college campus.\n"
-    "The player has NOT read any research paper. Write questions as if teaching them something new.\n"
-    "Use the following research excerpts to draw real facts and insights from:\n"
+    "You are creating quiz questions for an educational game that teaches players about disability and inclusion. "
+    "Assume the player has zero prior knowledge — the question itself should teach them something real.\n\n"
+    "Use only the facts and situations in these excerpts as your source material:\n"
     "-----\n"
     "{context}\n"
     "-----\n"
-    "Rules:\n"
-    "- Ask about a real concept, finding, or situation from the excerpts above\n"
-    "- NEVER reference 'the study', 'the experiment', 'researchers', or any acronyms\n"
-    "- Write in plain everyday language a college student would understand\n"
-    "- The question should feel like a real-life scenario or factual insight, not an academic quiz\n"
-    "- NEVER use the word 'our' — say 'people with peripheral vision loss' or 'students with visual impairments' instead\n"
+    "Write a question about a SPECIFIC disability or condition and a SPECIFIC challenge or experience it causes in daily life.\n"
+    "The challenge can involve anything real: reading, movement, social interaction, work, learning, navigation, or everyday tasks.\n\n"
+    "Strict rules:\n"
+    "- Name a specific disability or condition (not just 'a person with a disability')\n"
+    "- NEVER mention 'the study', 'research', 'experiment', 'researchers', 'participants', 'findings', or academic acronyms\n"
+    "- NEVER ask about requirements, eligibility, or how to join a study or program\n"
+    "- NEVER use 'our' or 'we' — always refer to people by their specific condition\n"
+    "- Plain, friendly language anyone can understand with no background\n"
     "- Question: max 20 words. Each answer option: max 10 words\n"
-    "- Make the wrong answers plausible but clearly incorrect\n"
-    "Return ONLY valid JSON: "
+    "- Exactly 4 options; wrong answers should be plausible but clearly not the best answer\n"
+    "Return ONLY valid JSON with no extra text: "
     '{{\"question\": \"...\", \"options\": [\"A\", \"B\", \"C\", \"D\"], \"correct\": 0}} '
     "where correct is the 0-based index of the right answer."
 )
 
-chain_main = prompt | llm_main
-chain_classroom = prompt | llm_classroom
+chain = prompt | llm
 
 # ─── RAG: load vector DB (built once by ingest.py) ────────────────────────────
 _CHROMA_DIR = os.path.join(os.path.dirname(__file__), "chroma_db")
-_embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+_embeddings = HuggingFaceEmbeddings(model_name="Snowflake/snowflake-arctic-embed-m")
 
 if os.path.exists(_CHROMA_DIR):
     _vectordb = Chroma(persist_directory=_CHROMA_DIR, embedding_function=_embeddings)
@@ -62,26 +63,70 @@ else:
 
 
 _RAG_QUERIES = [
-    "findings results study participants disability",
-    "accommodation support strategies students barriers",
-    "visual impairment peripheral vision campus navigation",
-    "faculty professor instructor awareness response",
-    "disclosure documentation letter accommodation request",
-    "emotional psychological anxiety stress experience",
-    "policy law legislation disability rights",
-    "technology assistive tools screen reader",
+    # location probability learning & tunnel vision
+    "peripheral vision loss tunnel vision location probability learning",
+    "LPL location probability learning where targets appear spatial",
+    "transfer intact vision tunnel vision testing phase LPL",
+    # attention & awareness
+    "implicit explicit attentional learning awareness peripheral vision",
+    "peripheral vision role guiding attention visual search",
+    "attention orienting eye movements gaze fixation peripheral restriction",
+    # performance & visual search
+    "tunnel vision visual search target finding performance",
+    "reaction time accuracy detection peripheral vision restricted",
+    "saccade eye movement scanning strategy tunnel vision",
+    # spatial learning & adaptation
+    "peripheral vision loss impacts spatial attention learning",
+    "adaptation compensation strategies peripheral vision loss navigation",
+    "central vision reliance peripheral field loss reading walking",
+    # causes & daily life
+    "peripheral vision loss causes effects retinal disease glaucoma",
+    "peripheral vision loss daily life challenges activities",
+    "glaucoma retinitis pigmentosa peripheral field constriction functional impact",
+    # cognitive & implicit learning
+    "statistical learning probability implicit visual cortex peripheral",
+    "conscious awareness unconscious learning visual attention peripheral",
+    "top-down bottom-up attention visual cortex peripheral vision",
 ]
 
 
-def _get_context(k: int = 5) -> str:
-    """Retrieve chunks using a random topic query for variety each call."""
+# ─── Sequential query index ───────────────────────────────────────────────────
+_query_idx: int = 0
+
+def _get_context(k: int = 3) -> str:
+    """Retrieve chunks using the next query in sequence for each call."""
+    global _query_idx
     if _vectordb is None:
         return "(no research context available)"
-    query = random.choice(_RAG_QUERIES)
+    query = _RAG_QUERIES[_query_idx % len(_RAG_QUERIES)]
+    _query_idx += 1
+    print(f"[RAG] query: {query}")
     docs = _vectordb.similarity_search(query, k=k)
     return "\n\n".join(d.page_content for d in docs)
 
-last_question_text = None
+# ─── Server-side question pool ────────────────────────────────────────────────
+_POOL_SIZE = 2  # keep two questions pre-generated so scene transitions don't stall
+_Q_QUESTIONS: asyncio.Queue = asyncio.Queue()
+
+async def _generate_one() -> dict:
+    context = _get_context()
+    response = await chain.ainvoke({"context": context})
+    return _extract_json(response.content)
+
+async def _refill():
+    """Top up the shared pool to _POOL_SIZE in the background."""
+    while _Q_QUESTIONS.qsize() < _POOL_SIZE:
+        try:
+            data = await _generate_one()
+            await _Q_QUESTIONS.put(data)
+            print(f"[pool] pool now {_Q_QUESTIONS.qsize()}/{_POOL_SIZE}")
+        except Exception as e:
+            print(f"[pool] refill error: {e}")
+            break
+
+@app.on_event("startup")
+async def prefill_queues():
+    asyncio.create_task(_refill())
 
 fallback_questions = [
     {
@@ -196,31 +241,21 @@ async def text_to_speech(payload: dict):
 
 @app.get("/api/question")
 async def get_question(scene: str = "main"):
-    global last_question_text
-    chain = chain_classroom if scene == "classroom" else chain_main
+    # Always kick off background refill so the pool stays topped up
+    asyncio.create_task(_refill())
 
     try:
-        data = None
-        context = _get_context()
-        # Retry a few times to reduce duplicate consecutive questions.
-        for _ in range(3):
-            response = await chain.ainvoke({"context": context})
-            parsed = _extract_json(response.content)
-            q_text = parsed.get("question", "") if isinstance(parsed, dict) else ""
-            if q_text and q_text != last_question_text:
-                data = parsed
-                break
-
-        if data is None:
-            data = _pick_fallback(last_question_text)
-
-        last_question_text = data.get("question")
+        data = _Q_QUESTIONS.get_nowait()   # instant if pool has a question ready
+        print(f"[pool] served from queue (size now {_Q_QUESTIONS.qsize()})")
         return data
-    except Exception as e:
-        print(f"LLM Error: {e}")
-        fallback = _pick_fallback(last_question_text)
-        last_question_text = fallback.get("question")
-        return fallback
+    except asyncio.QueueEmpty:
+        # Pool not ready yet — generate on-demand (first request or cold start)
+        print("[pool] queue empty, generating on-demand")
+        try:
+            return await _generate_one()
+        except Exception as e:
+            print(f"LLM Error: {e}")
+            return _pick_fallback(None)
 
 if __name__ == "__main__":
     import uvicorn

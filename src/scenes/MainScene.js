@@ -803,6 +803,7 @@ class MainScene extends Phaser.Scene {
         this._domQuestText.style.color = '';
 
         if (this.questionsCompleted >= this.totalQuestions) {
+            this.gameState.allTokensComplete = true;
             this._domQuestText.textContent = 'All done! Now find the security guard. \u2714';
             this._domQuestText.style.color = '#44ff88';
             this.playNarration('All done! Now find the security guard.');
