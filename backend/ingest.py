@@ -9,7 +9,7 @@ Run from backend/ directory:
 import os
 from dotenv import load_dotenv
 from docling.document_converter import DocumentConverter
-from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_core.documents import Document
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_chroma import Chroma
@@ -44,13 +44,13 @@ def main():
     print(f"  Total characters: {len(full_text)}")
 
     # Step 2: Chunk
-    splitter = RecursiveCharacterTextSplitter(chunk_size=800, chunk_overlap=100)
+    splitter = RecursiveCharacterTextSplitter(chunk_size=400, chunk_overlap=60)
     chunks = splitter.split_documents([Document(page_content=full_text)])
     print(f"  Split into {len(chunks)} chunks")
 
     # Step 3: Embed and store
     print("Embedding and storing in ChromaDB...")
-    embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+    embeddings = HuggingFaceEmbeddings(model_name="Snowflake/snowflake-arctic-embed-m")
     db = Chroma.from_documents(chunks, embeddings, persist_directory=CHROMA_DIR)
     print(f"  Saved {db._collection.count()} vectors to {CHROMA_DIR}")
     print("Done! Commit both chroma_db/ and research_text.txt to git.")

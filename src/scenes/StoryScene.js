@@ -3,6 +3,10 @@ class StoryScene extends Phaser.Scene {
         super({ key: 'StoryScene' });
     }
 
+    preload() {
+        this.load.atlas('speaker', 'assets/speakerr.png', 'assets/speaker.json');
+    }
+
     create(data) {
         this.characterData = data;
         // Dark background
@@ -54,6 +58,20 @@ class StoryScene extends Phaser.Scene {
             paused: true
         });
 
+        // Speaker sprite — bottom right
+        if (!this.anims.exists('speaker-talk')) {
+            this.anims.create({
+                key: 'speaker-talk',
+                frames: this.anims.generateFrameNames('speaker', {
+                    prefix: 'Sprite-0006 ', suffix: '.', start: 0, end: 4
+                }),
+                frameRate: 5,
+                repeat: -1
+            });
+        }
+        this.speakerSprite = this.add.sprite(690, 425, 'speaker').setDisplaySize(350, 350).setAlpha(0.85);
+        this.speakerSprite.play('speaker-talk');
+
         // Fetch and play TTS audio — will sync typing speed to audio
         this.prefetchSpeech(this.fullText);
 
@@ -68,6 +86,7 @@ class StoryScene extends Phaser.Scene {
                 this.storyText.setText(this.fullText);
                 this.typingDone = true;
                 this.skipText.setAlpha(0);
+                if (this.speakerSprite) this.speakerSprite.stop();
                 this.showContinuePrompt();
             } else {
                 if (this.audio) {
@@ -142,6 +161,7 @@ class StoryScene extends Phaser.Scene {
             this.typingTimer.remove();
             this.typingDone = true;
             this.skipText.setAlpha(0);
+            if (this.speakerSprite) this.speakerSprite.stop();
             this.showContinuePrompt();
         }
     }

@@ -7,6 +7,7 @@ class CampusScene extends Phaser.Scene {
         this.load.atlas('anna', 'assets/anna.png', 'assets/anna.json');
         this.load.atlas('lu', 'assets/lu.png', 'assets/lu.json');
         this.load.atlas('bg-classroom', 'assets/background.png', 'assets/background.json');
+        this.load.image('ledge', 'assets/ledge.png');
 
         this.load.on('filecomplete-atlas-anna', () => {
             this.textures.get('anna').setFilter(Phaser.Textures.FilterMode.NEAREST);
@@ -17,6 +18,9 @@ class CampusScene extends Phaser.Scene {
         this.load.on('filecomplete-atlas-bg-classroom', () => {
             this.textures.get('bg-classroom').setFilter(Phaser.Textures.FilterMode.NEAREST);
         });
+
+        this.load.svg('sign-boylan', 'assets/Boylan.svg');
+        this.load.svg('sign-ingersoll', 'assets/Ingersoll.svg');
 
         this.load.audio('music', 'assets/sounds/menuMusic1.mp3');
         this.load.audio('jump', 'assets/sounds/jump1.wav');
@@ -35,7 +39,7 @@ class CampusScene extends Phaser.Scene {
         };
 
         this.currentCharacter = data?.character || 'anna';
-        this.correctDoor = Math.random() < 0.5 ? 'left' : 'right';
+        this.correctDoor = 'right'; // Ingersoll Hall (Door B) is always correct
         this.isNearDoor = null;
         this.isChoosing = false;
         this.isAnswering = false;
@@ -55,6 +59,7 @@ class CampusScene extends Phaser.Scene {
         this.buildAnimations();
         this.buildDoors();
         this.buildUI();
+        this.buildPauseMenu();
         this.buildQuestionUI();
         this.buildTokens();
         this.buildTunnelVision();
@@ -105,28 +110,27 @@ class CampusScene extends Phaser.Scene {
     buildPlatforms() {
         this.platforms = this.physics.add.staticGroup();
 
-        const addPlat = (x, y, w, h, color) => {
-            const p = this.add.rectangle(x, y, w, h, color);
+        const addPlat = (x, y, w, h) => {
+            const p = this.add.image(x, y, 'ledge').setDisplaySize(w, h);
             this.physics.add.existing(p, true);
             p.body.setSize(w, h);
             p.body.reset(x, y);
             this.platforms.add(p);
         };
 
-        // Ground / floor
-        addPlat(400, 536, 800, 32, 0x2a1a0a);
+        // Ground (invisible, collision only)
+        const ground = this.add.rectangle(400, 536, 800, 32, 0x000000, 0);
+        this.physics.add.existing(ground, true);
+        ground.body.setSize(800, 32);
+        ground.body.reset(400, 536);
+        this.platforms.add(ground);
 
-        // Classroom desks as platforms (student seats)
-        addPlat(150, 430, 100, 16, 0x5c3d1a); // desk 1
-        addPlat(300, 430, 100, 16, 0x5c3d1a); // desk 2
-        addPlat(150, 330, 100, 16, 0x5c3d1a); // desk 3 (back row)
-        addPlat(300, 330, 100, 16, 0x5c3d1a); // desk 4 (back row)
-
-        // Raised area at the front (professor's area)
-        addPlat(660, 490, 240, 16, 0x4a3010);
-
-        // Steps up to raised area
-        addPlat(530, 506, 60, 16, 0x3a2510);
+        addPlat(600, 420, 200, 20);
+        addPlat(200, 300, 200, 20);
+        addPlat(750, 260, 160, 20);
+        addPlat(330, 370, 80, 14);
+        addPlat(430, 330, 60, 14);
+        addPlat(520, 240, 70, 14);
     }
 
     // ─── Player ───────────────────────────────────────────────────────────────
@@ -196,83 +200,125 @@ class CampusScene extends Phaser.Scene {
     // ─── Doors ────────────────────────────────────────────────────────────────
 
     buildDoors() {
-        // Left door (Door A)
+        // Left door — Boylan Hall
         this.leftDoor = this.add.rectangle(60, 474, 44, 64, 0x8b5e3c).setDepth(5);
         this.leftDoor.setStrokeStyle(3, 0x4a2a0a);
         this.add.rectangle(72, 474, 8, 8, 0xffd700).setDepth(6); // knob
-        this.add.text(60, 432, 'DOOR A', {
-            fontSize: '10px', fill: '#ffdd99', fontFamily: 'monospace'
-        }).setOrigin(0.5).setDepth(6);
+        this.add.image(60, 420, 'sign-boylan')
+            .setAngle(-90)
+            .setScale(0.04)
+            .setDepth(6);
 
-        // Right door (Door B)
+        // Right door — Ingersoll Hall
         this.rightDoor = this.add.rectangle(740, 474, 44, 64, 0x8b5e3c).setDepth(5);
         this.rightDoor.setStrokeStyle(3, 0x4a2a0a);
         this.add.rectangle(728, 474, 8, 8, 0xffd700).setDepth(6); // knob
-        this.add.text(740, 432, 'DOOR B', {
-            fontSize: '10px', fill: '#ffdd99', fontFamily: 'monospace'
-        }).setOrigin(0.5).setDepth(6);
+        this.add.image(740, 420, 'sign-ingersoll')
+            .setAngle(-90)
+            .setScale(0.02)
+            .setDepth(6);
+    }
+
+    // ─── Pause Menu ───────────────────────────────────────────────────────────
+
+    buildPauseMenu() {
+        const depth = 600;
+
+        this.pauseOverlay = this.add.rectangle(400, 300, 800, 600, 0x000000, 0.75)
+            .setDepth(depth).setVisible(false);
+
+        this.pausePanel = this.add.rectangle(400, 300, 320, 200, 0x111122, 1)
+            .setDepth(depth + 1).setVisible(false)
+            .setStrokeStyle(2, 0xaaddff);
+
+        this.pauseTitle = this.add.text(400, 230, 'PAUSED', {
+            fontSize: '22px', fill: '#ffffff', fontFamily: 'monospace'
+        }).setOrigin(0.5).setDepth(depth + 2).setVisible(false);
+
+        this.pauseContinueBtn = this.add.rectangle(400, 290, 200, 36, 0x224488)
+            .setDepth(depth + 2).setVisible(false).setInteractive({ useHandCursor: true })
+            .on('pointerdown', () => this.resumeGame())
+            .on('pointerover', function() { this.setFillStyle(0x3366cc); })
+            .on('pointerout',  function() { this.setFillStyle(0x224488); });
+        this.pauseContinueText = this.add.text(400, 290, 'Continue', {
+            fontSize: '16px', fill: '#ffffff', fontFamily: 'monospace'
+        }).setOrigin(0.5).setDepth(depth + 3).setVisible(false);
+
+        this.pauseEndBtn = this.add.rectangle(400, 345, 200, 36, 0x882222)
+            .setDepth(depth + 2).setVisible(false).setInteractive({ useHandCursor: true })
+            .on('pointerdown', () => this.scene.start('TitleScene'))
+            .on('pointerover', function() { this.setFillStyle(0xcc3333); })
+            .on('pointerout',  function() { this.setFillStyle(0x882222); });
+        this.pauseEndText = this.add.text(400, 345, 'End Game', {
+            fontSize: '16px', fill: '#ffffff', fontFamily: 'monospace'
+        }).setOrigin(0.5).setDepth(depth + 3).setVisible(false);
+
+        this.menuBtn = this.add.rectangle(770, 18, 56, 22, 0x224488)
+            .setDepth(depth).setInteractive({ useHandCursor: true })
+            .on('pointerdown', () => this.togglePause())
+            .on('pointerover', function() { this.setFillStyle(0x3366cc); })
+            .on('pointerout',  function() { this.setFillStyle(0x224488); });
+        this.add.text(770, 18, 'MENU', {
+            fontSize: '11px', fill: '#ffffff', fontFamily: 'monospace'
+        }).setOrigin(0.5).setDepth(depth + 1);
+    }
+
+    togglePause() {
+        if (this.isPaused) {
+            this.resumeGame();
+        } else {
+            this.pauseGame();
+        }
+    }
+
+    pauseGame() {
+        this.isPaused = true;
+        this.player.body.setVelocity(0, 0);
+        [this.pauseOverlay, this.pausePanel, this.pauseTitle,
+         this.pauseContinueBtn, this.pauseContinueText,
+         this.pauseEndBtn, this.pauseEndText].forEach(o => o.setVisible(true));
+    }
+
+    resumeGame() {
+        this.isPaused = false;
+        [this.pauseOverlay, this.pausePanel, this.pauseTitle,
+         this.pauseContinueBtn, this.pauseContinueText,
+         this.pauseEndBtn, this.pauseEndText].forEach(o => o.setVisible(false));
     }
 
     // ─── UI ───────────────────────────────────────────────────────────────────
 
     buildUI() {
-        // Level indicator
-        this.add.text(400, 14, '— LEVEL 2: THE CAMPUS —', {
-            fontSize: '13px',
-            fill: '#cc9944',
-            fontFamily: 'monospace'
-        }).setOrigin(0.5);
+        // Reuse the same HTML stats panel as MainScene
+        this._domObjective = document.getElementById('stats-objective');
+        this._domScore     = document.getElementById('stats-score');
+        this._domBar       = document.getElementById('stats-bar');
+        this._domPct       = document.getElementById('stats-pct');
+        this._domFeedback  = document.getElementById('stats-feedback');
+        this._domQuestText = document.getElementById('quest-bar-text');
 
-        // Objective
-        this.objectiveText = this.add.text(20, 32, `▶ ${this.gameState.objective}`, {
-            fontSize: '13px',
-            fill: '#aaddff',
-            fontFamily: 'monospace'
+        this._domObjective.textContent = `▶ ${this.gameState.objective}`;
+        this._domScore.textContent     = `SCORE: ${this.gameState.score}`;
+        this._domFeedback.textContent  = 'Press H for help';
+        this._domQuestText.textContent = `Collect questions: 0 / ${this.totalQuestions}`;
+        this._domQuestText.style.color = '';
+
+        document.getElementById('stats-html').style.display     = 'block';
+        document.getElementById('quest-bar-html').style.display = 'flex';
+
+        this.events.once('shutdown', () => {
+            document.getElementById('stats-html').style.display     = 'none';
+            document.getElementById('quest-bar-html').style.display = 'none';
         });
 
-        // Score
-        this.scoreText = this.add.text(20, 50, `SCORE: ${this.gameState.score}`, {
-            fontSize: '13px',
-            fill: '#ffffff',
-            fontFamily: 'monospace'
-        });
-
-        // Anxiety bar
-        this.add.text(20, 68, 'ANXIETY:', {
-            fontSize: '12px',
-            fill: '#ff6666',
-            fontFamily: 'monospace'
-        });
-        this.add.rectangle(105, 75, 150, 12, 0x333333).setOrigin(0, 0.5);
-        this.anxietyBar = this.add.rectangle(105, 75, 0, 12, 0xff3333).setOrigin(0, 0.5);
-        this.anxietyLabel = this.add.text(262, 68, '0%', {
-            fontSize: '12px',
-            fill: '#ff6666',
-            fontFamily: 'monospace'
-        });
-
-        // Feedback
-        this.feedbackText = this.add.text(20, 85, 'Press H for help', {
-            fontSize: '13px',
-            fill: '#ffff99',
-            fontFamily: 'monospace'
-        });
-
-        // Controls hint
-        this.add.text(20, 560, 'WASD / Arrows: Move   W / Up: Jump   E: Interact   H: Help', {
-            fontSize: '11px',
-            fill: '#445566',
-            fontFamily: 'monospace'
-        });
-
-        // Interact prompt
-        this.interactText = this.add.text(400, 400, '', {
+        // Interact prompt fixed at top-center so it's always outside the tunnel
+        this.interactText = this.add.text(400, 555, '', {
             fontSize: '15px',
             fill: '#ffff99',
-            fontFamily: 'monospace'
-        }).setOrigin(0.5);
-
-
+            fontFamily: 'monospace',
+            backgroundColor: '#000000aa',
+            padding: { x: 8, y: 4 }
+        }).setOrigin(0.5).setDepth(600);
     }
 
     // ─── Controls ─────────────────────────────────────────────────────────────
@@ -296,6 +342,7 @@ class CampusScene extends Phaser.Scene {
     // ─── Update ───────────────────────────────────────────────────────────────
 
     update() {
+        if (this.isPaused) return;
         this.handleMovement();
         this.handleDoorInteraction();
         this.handleQuestionInput();
@@ -367,10 +414,10 @@ class CampusScene extends Phaser.Scene {
 
         if (distLeft < 80) {
             this.isNearDoor = 'left';
-            this.interactText.setText('[ Press E to enter Door A ]');
+            this.interactText.setText('[ Press E to enter Boylan Hall ]');
         } else if (distRight < 80) {
             this.isNearDoor = 'right';
-            this.interactText.setText('[ Press E to enter Door B ]');
+            this.interactText.setText('[ Press E to enter Ingersoll Hall ]');
         } else {
             this.isNearDoor = null;
             this.interactText.setText('');
@@ -381,7 +428,7 @@ class CampusScene extends Phaser.Scene {
         }
 
         if (Phaser.Input.Keyboard.JustDown(this.helpKey)) {
-            this.feedbackText.setText('HELP: Answer all tokens, then pick the correct door!');
+            this._domFeedback.textContent = 'HELP: Answer all tokens, then pick the correct door!';
         }
     }
 
@@ -390,18 +437,19 @@ class CampusScene extends Phaser.Scene {
         if (side === this.correctDoor) {
             this.gameState.score += 100;
             this.gameState.choices.push(`Door ${side === 'left' ? 'A' : 'B'} \u2713`);
-            this.feedbackText.setText('\u2713 Correct door! You found the way out!');
+            this._domFeedback.textContent = '✓ Correct door! You found the way out!';
             this.time.delayedCall(1500, () => {
                 this.scene.start('WinScene', {
                     score: this.gameState.score,
                     choices: this.gameState.choices,
-                    character: this.currentCharacter
+                    character: this.currentCharacter,
+                    level: 2
                 });
             });
         } else {
             this.gameState.anxiety = Math.min(100, this.gameState.anxiety + 25);
             this.gameState.choices.push(`Door ${side === 'left' ? 'A' : 'B'} \u2717`);
-            this.feedbackText.setText('\u2717 Wrong door! Anxiety +25%.');
+            this._domFeedback.textContent = '✗ Wrong door! Anxiety +25%.';
             this.isChoosing = false;
             this.gameState.interactionCooldown = true;
             this.time.delayedCall(2000, () => {
@@ -414,21 +462,17 @@ class CampusScene extends Phaser.Scene {
     checkAnxiety() {
         if (this.gameState.anxiety >= 100) {
             this.time.delayedCall(1000, () => {
-                this.scene.start('GameOverScene', {
-                    anxiety: this.gameState.anxiety,
-                    choices: this.gameState.choices,
-                    character: this.currentCharacter
-                });
+                this.scene.start('TitleScene');
             });
         }
     }
 
     updateUI() {
-        this.scoreText.setText(`SCORE: ${this.gameState.score}`);
-        const barWidth = (this.gameState.anxiety / 100) * 150;
-        this.anxietyBar.width = barWidth;
-        this.anxietyBar.setFillStyle(this.gameState.anxiety < 50 ? 0xffaa00 : 0xff2222);
-        this.anxietyLabel.setText(`${this.gameState.anxiety}%`);
+        this._domScore.textContent = `SCORE: ${this.gameState.score}`;
+        const pct = this.gameState.anxiety;
+        this._domBar.style.width      = `${pct}%`;
+        this._domBar.style.background = pct < 50 ? '#ffaa00' : '#ff2222';
+        this._domPct.textContent      = `${pct}%`;
     }
 
     // ─── Tunnel Vision ────────────────────────────────────────────────────────
@@ -461,35 +505,33 @@ class CampusScene extends Phaser.Scene {
         this.tokens = this.physics.add.staticGroup();
 
         const positions = [
-            { x: 150, y: 395 },
-            { x: 300, y: 295 },
-            { x: 420, y: 480 },
+            { x: 600, y: 398 },
+            { x: 200, y: 278 },
+            { x: 750, y: 238 },
         ];
 
-        positions.forEach((pos, i) => {
-            const token = this.add.circle(pos.x, pos.y, 10, 0x00ccff);
-            token.setDepth(10);
+        positions.forEach((pos) => {
+            const token = this.add.rectangle(pos.x, pos.y, 24, 24, 0xffdd00);
+            token.setStrokeStyle(2, 0xff8800);
             this.physics.add.existing(token, true);
+            token.body.setSize(24, 24);
+            token.body.reset(pos.x, pos.y);
             this.tokens.add(token);
 
-            const label = this.add.text(pos.x, pos.y - 18, '?', {
-                fontSize: '14px', fill: '#ffffff', fontFamily: 'monospace'
-            }).setOrigin(0.5).setDepth(11);
+            const label = this.add.text(pos.x, pos.y, '?', {
+                fontSize: '16px', fill: '#885500', fontFamily: 'monospace', fontStyle: 'bold'
+            }).setOrigin(0.5);
             token.label = label;
 
             this.tweens.add({
                 targets: [token, label],
-                y: '-=6',
-                duration: 800,
-                yoyo: true,
-                repeat: -1,
+                scaleX: 1.2, scaleY: 1.2,
+                duration: 500, yoyo: true, repeat: -1,
                 ease: 'Sine.easeInOut'
             });
         });
 
-        this.questText = this.add.text(20, 104, `Collect questions: 0 / ${this.totalQuestions}`, {
-            fontSize: '13px', fill: '#aaddff', fontFamily: 'monospace'
-        }).setDepth(10);
+        // quest text is now the HTML quest-bar
     }
 
     // ─── Question UI ──────────────────────────────────────────────────────────
@@ -515,17 +557,21 @@ class CampusScene extends Phaser.Scene {
     }
 
     _spawnToken(x, y) {
-        const token = this.add.circle(x, y, 10, 0x00ccff);
-        token.setDepth(10);
+        const token = this.add.rectangle(x, y, 24, 24, 0xffdd00);
+        token.setStrokeStyle(2, 0xff8800);
         this.physics.add.existing(token, true);
+        token.body.setSize(24, 24);
+        token.body.reset(x, y);
         this.tokens.add(token);
-        const label = this.add.text(x, y - 18, '?', {
-            fontSize: '14px', fill: '#ffffff', fontFamily: 'monospace'
-        }).setOrigin(0.5).setDepth(11);
+        const label = this.add.text(x, y, '?', {
+            fontSize: '16px', fill: '#885500', fontFamily: 'monospace', fontStyle: 'bold'
+        }).setOrigin(0.5);
         token.label = label;
         token._tween = this.tweens.add({
             targets: [token, label],
-            y: '-=6', duration: 800, yoyo: true, repeat: -1, ease: 'Sine.easeInOut'
+            scaleX: 1.2, scaleY: 1.2,
+            duration: 500, yoyo: true, repeat: -1,
+            ease: 'Sine.easeInOut'
         });
     }
 
@@ -677,12 +723,13 @@ class CampusScene extends Phaser.Scene {
         this._qOverlay.style.display = 'none';
 
         this.questionsCompleted++;
-        this.questText.setText(`Collect questions: ${this.questionsCompleted} / ${this.totalQuestions}`);
-
+        this._domQuestText.textContent = `Collect questions: ${this.questionsCompleted} / ${this.totalQuestions}`;
+        this._domQuestText.style.color = '';
         if (this.questionsCompleted >= this.totalQuestions) {
             this.gameState.allTokensComplete = true;
-            this.questText.setText('All done! Now find the correct door. \u2714').setStyle({ fill: '#44ff88' });
-            this.playNarration('All done! Now find the correct door.');
+            this._domQuestText.textContent = 'All done! Find Ingersoll Hall. ✔';
+            this._domQuestText.style.color = '#44ff88';
+            this.playNarration('All done! Find Ingersoll Hall.');
         }
 
         this._prefetchNext();

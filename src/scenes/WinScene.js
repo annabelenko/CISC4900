@@ -67,7 +67,7 @@ class WinScene extends Phaser.Scene {
             }).setOrigin(0.5);
 
             this.input.keyboard.once('keydown-SPACE', () => {
-                this.scene.start('ClassroomScene', {
+                this.scene.start('CampusScene', {
                     score: data.score,
                     choices: data.choices,
                     character: data.character
