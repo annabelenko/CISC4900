@@ -389,12 +389,18 @@ class CampusScene extends Phaser.Scene {
     }
 
     handleMovement() {
-        if (this.isChoosing) return;
+        if (this.isChoosing || this.isAnswering) return;
 
         const char = this.currentCharacter;
         const onGround = this.player.body.touching.down;
         const isLeft = this.cursors.left.isDown || this.wasd.A.isDown;
         const isRight = this.cursors.right.isDown || this.wasd.D.isDown;
+
+        if ((isLeft || isRight) && onGround && !this.walkSound.isPlaying) {
+            this.walkSound.play();
+        } else if (!isLeft && !isRight) {
+            this.walkSound.stop();
+        }
 
         if (isLeft) {
             this.player.body.setVelocityX(-180);
@@ -418,6 +424,7 @@ class CampusScene extends Phaser.Scene {
         if ((this.cursors.up.isDown || this.wasd.W.isDown) && onGround) {
             this.player.body.setVelocityY(-370);
             this.player.anims.play(`${char}-jump`);
+            this.jumpSound.play();
         }
 
         if (this.player.body.velocity.y < 0 && !(this.cursors.up.isDown || this.wasd.W.isDown)) {
@@ -629,6 +636,8 @@ class CampusScene extends Phaser.Scene {
         token.destroy();
         this.isAnswering = true;
         this.player.body.setVelocity(0, 0);
+        this.walkSound.stop();                                      
+        this.player.anims.play(`${this.currentCharacter}-idle`);
         this.fetchQuestion();
     }
 
@@ -731,7 +740,33 @@ class CampusScene extends Phaser.Scene {
         closeBtn.onclick = () => this._onQuestionClose();
         this._questionAnswered = false;
         this._qOverlay.style.display = 'flex';
-        if (!this._questionTimer) this._startQuestionTimer();
+        this._startQuestionTimer(30);
+    }
+
+    _startQuestionTimer(seconds) {
+        if (this._questionTimerEvent) this._questionTimerEvent.remove();
+        let remaining = seconds;
+        if (this._qTimer) this._qTimer.textContent = `⏱ ${remaining}s`;
+        this._questionTimerEvent = this.time.addEvent({
+            delay: 1000,
+            repeat: seconds - 1,
+            callback: () => {
+                remaining--;
+                if (this._qTimer) this._qTimer.textContent = `⏱ ${remaining}s`;
+                if (remaining <= 0) {
+                    // Time's up — treat as wrong answer
+                    if (!this._questionAnswered) {
+                        this.gameState.anxiety = Math.min(100, this.gameState.anxiety + 15);
+                        this._qResult.textContent = "Time's up! Anxiety +15%";
+                        this._qResult.className = 'wrong';
+                        this._questionAnswered = true;
+                        this.questionCooldown = true;
+                        this.time.delayedCall(1500, () => this.closeQuestion());
+                        this.checkAnxiety();
+                    }
+                }
+            }
+        });
     }
 
     _randomTokenPos() {
@@ -796,6 +831,7 @@ class CampusScene extends Phaser.Scene {
     }
 
     closeQuestion() {
+        if (this._questionTimerEvent) this._questionTimerEvent.remove();
         this._clearQuestionTimer();
         this.isAnswering = false;
         this.currentQuestion = null;

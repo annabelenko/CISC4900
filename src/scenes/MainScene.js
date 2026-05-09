@@ -650,6 +650,7 @@ class MainScene extends Phaser.Scene {
         this._qText    = document.getElementById('question-html-text');
         this._qOptions = document.getElementById('question-html-options');
         this._qResult  = document.getElementById('question-html-result');
+        this._qTimer = document.getElementById('question-html-timer');
     }
 
     async _prefetchNext() {
@@ -679,6 +680,8 @@ class MainScene extends Phaser.Scene {
         token.destroy();
         this.isAnswering = true;
         this.player.body.setVelocity(0, 0);
+        this.walkSound.stop();
+        this.player.anims.play(`${this.currentCharacter}-idle`);
         this.fetchQuestion();
     }
 
@@ -767,6 +770,33 @@ class MainScene extends Phaser.Scene {
         closeBtn.onclick = () => this._onQuestionClose();
         this._questionAnswered = false;
         this._qOverlay.style.display = 'flex';
+        this._startQuestionTimer(30);
+    }
+
+    _startQuestionTimer(seconds) {
+        if (this._questionTimerEvent) this._questionTimerEvent.remove();
+        let remaining = seconds;
+        if (this._qTimer) this._qTimer.textContent = `⏱ ${remaining}s`;
+        this._questionTimerEvent = this.time.addEvent({
+            delay: 1000,
+            repeat: seconds - 1,
+            callback: () => {
+                remaining--;
+                if (this._qTimer) this._qTimer.textContent = `⏱ ${remaining}s`;
+                if (remaining <= 0) {
+                    // Time's up — treat as wrong answer
+                    if (!this._questionAnswered) {
+                        this.gameState.anxiety = Math.min(100, this.gameState.anxiety + 15);
+                        this._qResult.textContent = "Time's up! Anxiety +15%";
+                        this._qResult.className = 'wrong';
+                        this._questionAnswered = true;
+                        this.questionCooldown = true;
+                        this.time.delayedCall(1500, () => this.closeQuestion());
+                        this.checkAnxiety();
+                    }
+                }
+            }
+        });
     }
 
     _randomTokenPos() {
@@ -832,6 +862,7 @@ class MainScene extends Phaser.Scene {
     }
 
     closeQuestion() {
+        if (this._questionTimerEvent) this._questionTimerEvent.remove();
         this.isAnswering = false;
         this.currentQuestion = null;
         this.questionCooldown = false;
