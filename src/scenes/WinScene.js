@@ -2,8 +2,14 @@ class WinScene extends Phaser.Scene {
     constructor() {
         super({ key: 'WinScene' });
     }
-
+    preload() {
+        this.load.audio('victoryMusic', 'assets/sounds/victoryMusic.mp3');
+    }
     create(data) {
+
+        const victory = this.sound.add('victoryMusic', { loop: false, volume: 0.6 });
+        victory.play();
+
         const isLastLevel = data.level >= 2;
 
         this.add.rectangle(400, 300, 800, 600, 0x0a1a0a);
