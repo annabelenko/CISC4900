@@ -2,7 +2,14 @@
 
 A 2D educational platformer built with [Phaser 3](https://phaser.io/) about disability and accessibility on a college campus. Players navigate two scenes — a security checkpoint and a classroom — collecting quiz tokens that trigger AI-generated accessibility questions powered by a RAG pipeline backed by Google Gemini. Features tunnel vision simulation, text-to-speech narration, a selectable HTML UI, pixel-art sprites, an anxiety meter, and sound effects throughout.
 
-## Demo
+## Finished Demo
+
+<img width="800" height="508" alt="ezgif-6f4cbf6d1318d13a" src="https://github.com/user-attachments/assets/c28384d7-f7b7-4b16-ae96-6a705ab6417c" />
+
+<img width="800" alt="demo_new" src="demo_new.gif" />
+
+
+## Older Demo
 
 <img width="800" height="508" alt="ezgif-6f4cbf6d1318d13a" src="https://github.com/user-attachments/assets/c28384d7-f7b7-4b16-ae96-6a705ab6417c" />
 
@@ -189,6 +196,14 @@ CISC4900/
 ---
 
 ## 🧠 RAG Pipeline
+
+<img width="800" alt="langchain" src="langchain.gif" />
+
+### Role of LangChain & LangSmith
+
+**LangChain** is the glue that connects every component of the RAG pipeline. Rather than manually wiring together the embedding model, vector store, prompt template, and LLM, LangChain provides a unified API for building a chain: `retriever | prompt | llm | output_parser`. This means a single `.invoke()` call handles document retrieval, context injection, model call, and JSON parsing in one step. It also provides `RecursiveCharacterTextSplitter` for chunking research documents during ingestion, and `Chroma` as the vector store interface.
+
+**LangSmith** is an observability and debugging platform for LLM applications. Every chain invocation is automatically traced — you can see the exact retrieved documents, the full prompt sent to Gemini, the raw model response, latency, and token usage. This was essential for debugging prompt regressions (e.g. when the model started referencing "the study") and verifying that retrieval was returning relevant chunks. Tracing is enabled by setting `LANGSMITH_TRACING=true` in `.env`.
 
 Quiz questions are grounded in real accessibility research documents using a Retrieval-Augmented Generation (RAG) pipeline:
 
