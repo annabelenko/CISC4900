@@ -24,7 +24,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-llm = ChatGoogleGenerativeAI(model="gemini-2.5-pro", temperature=0.8)
+llm_main = ChatGoogleGenerativeAI(model="gemini-2.5-flash-lite", temperature=0.8)
+llm_classroom = ChatGoogleGenerativeAI(model="gemini-2.5-pro", temperature=0.8)
 
 prompt = ChatPromptTemplate.from_template(
     "You are creating quiz questions for an educational game that teaches players about disability and inclusion. "
@@ -48,11 +49,12 @@ prompt = ChatPromptTemplate.from_template(
     "where correct is the 0-based index of the right answer."
 )
 
-chain = prompt | llm
+chain_main = prompt | llm_main
+chain_classroom = prompt | llm_classroom
 
 # ─── RAG: load vector DB (built once by ingest.py) ────────────────────────────
 _CHROMA_DIR = os.path.join(os.path.dirname(__file__), "chroma_db")
-_embeddings = HuggingFaceEmbeddings(model_name="Snowflake/snowflake-arctic-embed-m")
+_embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
 
 if os.path.exists(_CHROMA_DIR):
     _vectordb = Chroma(persist_directory=_CHROMA_DIR, embedding_function=_embeddings)
@@ -63,52 +65,31 @@ else:
 
 
 _RAG_QUERIES = [
-    # location probability learning & tunnel vision
-    "peripheral vision loss tunnel vision location probability learning",
-    "LPL location probability learning where targets appear spatial",
-    "transfer intact vision tunnel vision testing phase LPL",
-    # attention & awareness
-    "implicit explicit attentional learning awareness peripheral vision",
-    "peripheral vision role guiding attention visual search",
-    "attention orienting eye movements gaze fixation peripheral restriction",
-    # performance & visual search
-    "tunnel vision visual search target finding performance",
-    "reaction time accuracy detection peripheral vision restricted",
-    "saccade eye movement scanning strategy tunnel vision",
-    # spatial learning & adaptation
-    "peripheral vision loss impacts spatial attention learning",
-    "adaptation compensation strategies peripheral vision loss navigation",
-    "central vision reliance peripheral field loss reading walking",
-    # causes & daily life
-    "peripheral vision loss causes effects retinal disease glaucoma",
-    "peripheral vision loss daily life challenges activities",
-    "glaucoma retinitis pigmentosa peripheral field constriction functional impact",
-    # cognitive & implicit learning
-    "statistical learning probability implicit visual cortex peripheral",
-    "conscious awareness unconscious learning visual attention peripheral",
-    "top-down bottom-up attention visual cortex peripheral vision",
+    "findings results study participants disability",
+    "accommodation support strategies students barriers",
+    "visual impairment peripheral vision campus navigation",
+    "faculty professor instructor awareness response",
+    "disclosure documentation letter accommodation request",
+    "emotional psychological anxiety stress experience",
+    "policy law legislation disability rights",
+    "technology assistive tools screen reader",
 ]
 
 
-# ─── Sequential query index ───────────────────────────────────────────────────
-_query_idx: int = 0
-
-def _get_context(k: int = 3) -> str:
-    """Retrieve chunks using the next query in sequence for each call."""
-    global _query_idx
+def _get_context(k: int = 5) -> str:
+    """Retrieve chunks using a random topic query for variety each call."""
     if _vectordb is None:
         return "(no research context available)"
-    query = _RAG_QUERIES[_query_idx % len(_RAG_QUERIES)]
-    _query_idx += 1
-    print(f"[RAG] query: {query}")
+    query = random.choice(_RAG_QUERIES)
     docs = _vectordb.similarity_search(query, k=k)
     return "\n\n".join(d.page_content for d in docs)
 
 # ─── Server-side question pool ────────────────────────────────────────────────
 _POOL_SIZE = 2  # keep two questions pre-generated so scene transitions don't stall
 _Q_QUESTIONS: asyncio.Queue = asyncio.Queue()
+last_question_text = None
 
-async def _generate_one() -> dict:
+async def _generate_one(chain) -> dict:
     context = _get_context()
     response = await chain.ainvoke({"context": context})
     return _extract_json(response.content)
@@ -117,7 +98,7 @@ async def _refill():
     """Top up the shared pool to _POOL_SIZE in the background."""
     while _Q_QUESTIONS.qsize() < _POOL_SIZE:
         try:
-            data = await _generate_one()
+            data = await _generate_one(chain_main)
             await _Q_QUESTIONS.put(data)
             print(f"[pool] pool now {_Q_QUESTIONS.qsize()}/{_POOL_SIZE}")
         except Exception as e:
@@ -241,21 +222,32 @@ async def text_to_speech(payload: dict):
 
 @app.get("/api/question")
 async def get_question(scene: str = "main"):
+    global last_question_text
+    chain = chain_classroom if scene == "classroom" else chain_main
     # Always kick off background refill so the pool stays topped up
     asyncio.create_task(_refill())
 
     try:
-        data = _Q_QUESTIONS.get_nowait()   # instant if pool has a question ready
-        print(f"[pool] served from queue (size now {_Q_QUESTIONS.qsize()})")
+        data = None
+        context = _get_context()
+        for _ in range(3):
+            response = await chain.ainvoke({"context": context})
+            parsed = _extract_json(response.content)
+            q_text = parsed.get("question", "") if isinstance(parsed, dict) else ""
+            if q_text and q_text != last_question_text:
+                data = parsed
+                break
+
+        if data is None:
+            data = _pick_fallback(last_question_text)
+
+        last_question_text = data.get("question")
         return data
-    except asyncio.QueueEmpty:
-        # Pool not ready yet — generate on-demand (first request or cold start)
-        print("[pool] queue empty, generating on-demand")
-        try:
-            return await _generate_one()
-        except Exception as e:
-            print(f"LLM Error: {e}")
-            return _pick_fallback(None)
+    except Exception as e:
+        print(f"LLM Error: {e}")
+        fallback = _pick_fallback(last_question_text)
+        last_question_text = fallback.get("question")
+        return fallback
 
 if __name__ == "__main__":
     import uvicorn
