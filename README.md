@@ -4,8 +4,6 @@ A 2D educational platformer built with [Phaser 3](https://phaser.io/) about disa
 
 ## Finished Demo
 
-<img width="800" height="508" alt="ezgif-6f4cbf6d1318d13a" src="https://github.com/user-attachments/assets/c28384d7-f7b7-4b16-ae96-6a705ab6417c" />
-
 <img width="800" alt="demo_new" src="demo_new.gif" />
 
 
