@@ -25,7 +25,7 @@ app.add_middleware(
 )
 
 llm_main = ChatGoogleGenerativeAI(model="gemini-2.5-flash-lite", temperature=0.8)
-llm_classroom = ChatGoogleGenerativeAI(model="gemini-2.5-pro", temperature=0.8)
+llm_classroom = ChatGoogleGenerativeAI(model="gemini-2.5-flash-lite", temperature=0.8)
 
 prompt = ChatPromptTemplate.from_template(
     "You are creating quiz questions for an educational game that teaches players about disability and inclusion. "
@@ -54,7 +54,7 @@ chain_classroom = prompt | llm_classroom
 
 # ─── RAG: load vector DB (built once by ingest.py) ────────────────────────────
 _CHROMA_DIR = os.path.join(os.path.dirname(__file__), "chroma_db")
-_embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+_embeddings = HuggingFaceEmbeddings(model_name="Snowflake/snowflake-arctic-embed-m")
 
 if os.path.exists(_CHROMA_DIR):
     _vectordb = Chroma(persist_directory=_CHROMA_DIR, embedding_function=_embeddings)
@@ -224,8 +224,6 @@ async def text_to_speech(payload: dict):
 async def get_question(scene: str = "main"):
     global last_question_text
     chain = chain_classroom if scene == "classroom" else chain_main
-    # Always kick off background refill so the pool stays topped up
-    asyncio.create_task(_refill())
 
     try:
         data = None
