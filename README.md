@@ -176,10 +176,10 @@ CISC4900/
 |-------|-----------|
 | Game engine | Phaser 3.70 (via CDN) |
 | Backend framework | FastAPI (Python) |
-| AI model | Google Gemini 2.5 Flash Lite |
+| AI model | Google Gemini 2.5 Flash Lite (`gemini-2.5-flash-lite`) — change to `gemini-2.5-pro` or `gemini-2.5-flash` for higher quality if your quota allows |
 | RAG — document OCR | docling |
 | RAG — text splitting | LangChain `RecursiveCharacterTextSplitter` |
-| RAG — embeddings | HuggingFace `all-MiniLM-L6-v2` |
+| RAG — embeddings | HuggingFace `Snowflake/snowflake-arctic-embed-m` |
 | RAG — vector store | ChromaDB (local) |
 | Text-to-speech | ElevenLabs API (voice: Rachel) |
 | LLM observability | LangSmith |
@@ -193,12 +193,80 @@ CISC4900/
 Quiz questions are grounded in real accessibility research documents using a Retrieval-Augmented Generation (RAG) pipeline:
 
 1. **Ingestion (`ingest.py`)** — Research PDFs are OCR-processed with docling and split into overlapping text chunks with `RecursiveCharacterTextSplitter`.
-2. **Embedding** — Each chunk is embedded using HuggingFace's `all-MiniLM-L6-v2` sentence transformer.
+2. **Embedding** — Each chunk is embedded using HuggingFace's `Snowflake/snowflake-arctic-embed-m` sentence transformer.
 3. **Storage** — Embeddings are persisted in a local ChromaDB vector store (`backend/chroma_db/`).
-4. **Retrieval** — At question time, the backend retrieves the most relevant chunks via cosine similarity search.
-5. **Generation** — Retrieved context is injected into a prompt sent to Google Gemini 2.5 Flash Lite, which generates a 4-option multiple-choice question.
+4. **Retrieval** — At question time, the backend selects a random query from a curated topic list and retrieves the top-5 most relevant chunks via cosine similarity search.
+5. **Generation** — Retrieved context is injected into a prompt sent to Google Gemini, which generates a 4-option multiple-choice question.
 
-The `/api/question` endpoint returns `{ question, options[], correct, explanation }`.
+---
+
+## 📄 Research Paper
+
+**Title:** *Contribution of Peripheral Vision to Attentional Learning*
+
+**Authors:** Chen Chen & Vanessa G. Lee — Department of Psychology, University of Minnesota
+
+**Published:** *Psychonomic Bulletin & Review*, November 2023
+
+**Summary:**
+This paper investigates the role of peripheral vision in **location probability learning (LPL)** — the brain's ability to implicitly learn that a visual target appears more often in certain spatial locations. Using gaze-contingent eye tracking, participants searched for a target T among distractor Ls, while some had "tunnel vision" simulated by restricting their visible field to the central 6.7° of their gaze.
+
+**Key Findings:**
+- Participants with **intact vision** acquired LPL regardless of whether they were consciously aware of the target's location bias — both explicit and implicit learning occurred.
+- Participants with **simulated peripheral vision loss (tunnel vision)** only acquired LPL when they were *explicitly aware* of the target location bias — implicit spatial learning was disrupted.
+- This demonstrates that **peripheral vision supports a nonselective (implicit) attentional pathway**, consistent with Guided Search theory (Wolfe, 2021).
+- Explicit (conscious) attentional learning can proceed with central vision alone; implicit learning cannot.
+
+**Why It Matters for This Game:**
+The game simulates peripheral vision loss via a tunnel-vision vignette overlay, directly reflecting the conditions studied in the paper. Quiz questions draw on the paper's findings to teach players about how visual impairments affect everyday cognition, navigation, and learning — not just visual acuity.
+
+---
+
+## 🤖 Prompt Engineering
+
+The LLM prompt is carefully designed to generate educationally grounded, accessible, and non-academic quiz questions from research context. Key design decisions:
+
+### Prompt Template
+```
+You are generating quiz questions for an educational game about disability and inclusion on a college campus.
+The player has NOT read any research paper. Write questions as if teaching them something new.
+Use the following research excerpts to draw real facts and insights from:
+-----
+{context}
+-----
+Rules:
+- Ask about a real concept, finding, or situation from the excerpts above
+- NEVER reference 'the study', 'the experiment', 'researchers', or any acronyms
+- Write in plain everyday language a college student would understand
+- The question should feel like a real-life scenario or factual insight, not an academic quiz
+- NEVER use the word 'our' — say 'people with peripheral vision loss' or 'students with visual impairments' instead
+- Question: max 20 words. Each answer option: max 10 words
+- Make the wrong answers plausible but clearly incorrect
+Return ONLY valid JSON: {"question": "...", "options": ["A", "B", "C", "D"], "correct": 0}
+```
+
+### Design Decisions
+| Decision | Rationale |
+|----------|-----------|
+| "Player has NOT read any research paper" | Prevents the model from referencing academic framing or assuming prior knowledge |
+| Ban on 'the study', 'researchers', 'acronyms' | Keeps questions grounded in real-world scenarios, not academic quizzes |
+| Ban on 'our' / 'we' | Avoids first-person voice that implies the player is part of a study group |
+| Max 20 words for question, 10 per option | Keeps questions readable and scannable during fast-paced gameplay |
+| Plausible wrong answers | Increases educational value — players must reason, not guess |
+| JSON-only output | Parsed directly by the backend with no post-processing ambiguity |
+| Retry up to 3× to avoid duplicates | Compares against `last_question_text` to prevent consecutive repeats |
+| Scene-based model routing | Level 1 (main) uses `gemini-2.5-flash-lite`; Level 2 (classroom) uses the same or a more capable model depending on config |
+
+### RAG Query Topics
+The backend randomly selects from 8 curated topic queries per request to ensure variety across different aspects of the research:
+- Findings, results, study participants, disability
+- Accommodation support strategies, student barriers
+- Visual impairment, peripheral vision, campus navigation
+- Faculty/professor awareness and response
+- Disclosure, documentation, accommodation letters
+- Emotional/psychological impact — anxiety, stress
+- Policy, law, disability rights
+- Assistive technology — screen readers, tools
 
 ---
 

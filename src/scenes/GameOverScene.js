@@ -32,14 +32,14 @@ class GameOverScene extends Phaser.Scene {
             align: 'center'
         }).setOrigin(0.5);
 
-        this.add.text(400, 450, 'Press SPACE to try again', {
+        this.add.text(400, 450, 'Press SPACE to return to title', {
             fontSize: '18px',
             fill: '#ffff99',
             fontFamily: 'monospace'
         }).setOrigin(0.5);
 
         this.input.keyboard.once('keydown-SPACE', () => {
-            this.scene.start('MainScene');
+            this.scene.start('TitleScene');
         });
     }
 }

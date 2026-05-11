@@ -507,7 +507,10 @@ class CampusScene extends Phaser.Scene {
     checkAnxiety() {
         if (this.gameState.anxiety >= 100) {
             this.time.delayedCall(1000, () => {
-                this.scene.start('TitleScene');
+                this.scene.start('GameOverScene', {
+                    anxiety: this.gameState.anxiety,
+                    choices: this.gameState.choices
+                });
             });
         }
     }
