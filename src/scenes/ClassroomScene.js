@@ -506,6 +506,7 @@ class CampusScene extends Phaser.Scene {
         this._qText    = document.getElementById('question-html-text');
         this._qOptions = document.getElementById('question-html-options');
         this._qResult  = document.getElementById('question-html-result');
+        this._qTimer   = document.getElementById('question-html-timer');
     }
 
     // ─── Token Collection & Questions ─────────────────────────────────────────

@@ -357,7 +357,93 @@ Scene narration is generated at runtime via the ElevenLabs API (`/api/tts` endpo
 
 ---
 
-## 🚧 Next Steps
+## � Code Highlights
+
+### Question Timer
+
+When a player collects a token and the question overlay opens, a 30-second countdown begins. If time runs out without an answer, anxiety increases by 15% and the overlay auto-closes.
+
+```js
+// src/scenes/MainScene.js
+_startQuestionTimer(seconds) {
+    if (this._questionTimerEvent) this._questionTimerEvent.remove();
+    let remaining = seconds;
+    if (this._qTimer) this._qTimer.textContent = `⏱ ${remaining}s`;
+    this._questionTimerEvent = this.time.addEvent({
+        delay: 1000,
+        repeat: seconds - 1,
+        callback: () => {
+            remaining--;
+            if (this._qTimer) this._qTimer.textContent = `⏱ ${remaining}s`;
+            if (remaining <= 0) {
+                if (!this._questionAnswered) {
+                    this.gameState.anxiety = Math.min(100, this.gameState.anxiety + 15);
+                    this._qResult.textContent = "Time's up! Anxiety +15%";
+                    this._qResult.className = 'wrong';
+                    this._questionAnswered = true;
+                    this.questionCooldown = true;
+                    this.time.delayedCall(1500, () => this.closeQuestion());
+                    this.checkAnxiety();
+                }
+            }
+        }
+    });
+}
+```
+
+The timer event is removed in `closeQuestion()` so it can never fire after the overlay is dismissed.
+
+---
+
+### Question Prefetch Loop
+
+To eliminate loading delays, the game fetches the **next question in the background** as soon as the current one closes. When the player collects the next token, the question is already ready and displays instantly.
+
+```js
+// src/scenes/MainScene.js
+
+// Called at scene start and again after each question closes
+async _prefetchNext() {
+    if (this._prefetchInProgress || this._prefetchedQuestion) return;
+    this._prefetchInProgress = true;
+    this._discardPrefetch = false;
+    try {
+        const res = await fetch(`http://localhost:8080/api/question?scene=main&t=${Date.now()}`, {
+            cache: 'no-store'
+        });
+        const data = await res.json();
+        if (!this._discardPrefetch) {
+            this._prefetchedQuestion = data;  // stored, ready to use instantly
+        }
+    } catch (e) {
+        // silently ignore — fetchQuestion() handles the fallback
+    } finally {
+        this._prefetchInProgress = false;
+        this._discardPrefetch = false;
+    }
+}
+
+// Called when a token is collected
+async fetchQuestion() {
+    // If a question was already prefetched, use it immediately (no network wait)
+    if (this._prefetchedQuestion) {
+        const data = this._prefetchedQuestion;
+        this._prefetchedQuestion = null;
+        this.currentQuestion = data;
+        this.showQuestion(data);
+        return;
+    }
+    // Otherwise fetch directly, discarding any in-flight prefetch
+    this._discardPrefetch = true;
+    // ... fetch and display
+}
+```
+
+This means two questions are effectively generated concurrently: one is being answered by the player while the next is already being fetched from the backend.
+
+---
+
+## �🚧 Next Steps
 
 - **Progressive difficulty** — Increase question difficulty per level by passing the current level number to the AI prompt.
 - **More scenes & levels** — Add new environments (library, cafeteria, dorm) each with unique NPCs and accessibility scenarios.

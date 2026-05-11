@@ -530,6 +530,10 @@ class MainScene extends Phaser.Scene {
     }
 
     handleGuardInteraction() {
+        if (Phaser.Input.Keyboard.JustDown(this.helpKey)) {
+            this._domFeedback.textContent = 'HELP: Walk to the guard and press E. Show the right ID!';
+        }
+
         if (this.isChoosing || this.isAnswering || this.gameState.interactionCooldown) return;
     
         if (!this.gameState.allTokensComplete) {
@@ -564,10 +568,6 @@ class MainScene extends Phaser.Scene {
 
         if (this.isNearGuard && this.questionsCompleted >= this.totalQuestions && Phaser.Input.Keyboard.JustDown(this.interactKey)) {
             this.openChoiceMenu();
-        }
-    
-        if (Phaser.Input.Keyboard.JustDown(this.helpKey)) {
-            this._domFeedback.textContent = 'HELP: Walk to the guard and press E. Show the right ID!';
         }
     }
 
