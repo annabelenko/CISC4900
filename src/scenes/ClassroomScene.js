@@ -402,7 +402,8 @@ class CampusScene extends Phaser.Scene {
                 this.scene.start('WinScene', {
                     score: this.gameState.score,
                     choices: this.gameState.choices,
-                    character: this.currentCharacter
+                    character: this.currentCharacter,
+                    level: 3
                 });
             });
         } else {

@@ -10,7 +10,7 @@ class WinScene extends Phaser.Scene {
         const victory = this.sound.add('victoryMusic', { loop: false, volume: 0.6 });
         victory.play();
 
-        const isLastLevel = data.level >= 2;
+        const isLastLevel = data.level >= 3;
 
         this.add.rectangle(400, 300, 800, 600, 0x0a1a0a);
 
@@ -73,7 +73,7 @@ class WinScene extends Phaser.Scene {
             }).setOrigin(0.5);
 
             this.input.keyboard.once('keydown-SPACE', () => {
-                this.scene.start('CampusScene', {
+                this.scene.start('ClassroomScene', {
                     score: data.score,
                     choices: data.choices,
                     anxiety: data.anxiety,
