@@ -1,6 +1,6 @@
-class CampusScene extends Phaser.Scene {
+class ClassroomScene extends Phaser.Scene {
     constructor() {
-        super({ key: 'CampusScene' });
+        super({ key: 'ClassroomScene' });
     }
 
     preload() {
@@ -48,6 +48,7 @@ class CampusScene extends Phaser.Scene {
         this._prefetchedQuestion = null;
         this._prefetchInProgress = false;
         this._discardPrefetch = false;
+        this.isPaused = false;
 
         this.buildBackground();
         this.buildPlatforms();
@@ -55,6 +56,7 @@ class CampusScene extends Phaser.Scene {
         this.buildAnimations();
         this.buildDoors();
         this.buildUI();
+        this.buildPauseMenu();
         this.buildQuestionUI();
         this.buildTokens();
         this.buildTunnelVision();
@@ -216,63 +218,136 @@ class CampusScene extends Phaser.Scene {
     // ─── UI ───────────────────────────────────────────────────────────────────
 
     buildUI() {
-        // Level indicator
-        this.add.text(400, 14, '— LEVEL 2: THE CAMPUS —', {
-            fontSize: '13px',
-            fill: '#cc9944',
-            fontFamily: 'monospace'
-        }).setOrigin(0.5);
+        this._domObjective = document.getElementById('stats-objective');
+        this._domScore     = document.getElementById('stats-score');
+        this._domBar       = document.getElementById('stats-bar');
+        this._domPct       = document.getElementById('stats-pct');
+        this._domFeedback  = document.getElementById('stats-feedback');
+        this._domQuestText = document.getElementById('quest-bar-text');
 
-        // Objective
-        this.objectiveText = this.add.text(20, 32, `▶ ${this.gameState.objective}`, {
-            fontSize: '13px',
-            fill: '#aaddff',
-            fontFamily: 'monospace'
+        this._domObjective.textContent = `▶ ${this.gameState.objective}`;
+        this._domScore.textContent     = `SCORE: ${this.gameState.score}`;
+        this._domFeedback.textContent  = 'Press H for help';
+        this._domQuestText.textContent = `Collect questions: 0 / ${this.totalQuestions}`;
+        this._domQuestText.style.color = '';
+
+        document.getElementById('stats-html').style.display     = 'block';
+        document.getElementById('quest-bar-html').style.display = 'flex';
+
+        this.events.once('shutdown', () => {
+            document.getElementById('stats-html').style.display     = 'none';
+            document.getElementById('quest-bar-html').style.display = 'none';
         });
 
-        // Score
-        this.scoreText = this.add.text(20, 50, `SCORE: ${this.gameState.score}`, {
-            fontSize: '13px',
-            fill: '#ffffff',
-            fontFamily: 'monospace'
-        });
-
-        // Anxiety bar
-        this.add.text(20, 68, 'ANXIETY:', {
-            fontSize: '12px',
-            fill: '#ff6666',
-            fontFamily: 'monospace'
-        });
-        this.add.rectangle(105, 75, 150, 12, 0x333333).setOrigin(0, 0.5);
-        this.anxietyBar = this.add.rectangle(105, 75, 0, 12, 0xff3333).setOrigin(0, 0.5);
-        this.anxietyLabel = this.add.text(262, 68, '0%', {
-            fontSize: '12px',
-            fill: '#ff6666',
-            fontFamily: 'monospace'
-        });
-
-        // Feedback
-        this.feedbackText = this.add.text(20, 85, 'Press H for help', {
-            fontSize: '13px',
-            fill: '#ffff99',
-            fontFamily: 'monospace'
-        });
-
-        // Controls hint
-        this.add.text(20, 560, 'WASD / Arrows: Move   W / Up: Jump   E: Interact   H: Help', {
-            fontSize: '11px',
-            fill: '#445566',
-            fontFamily: 'monospace'
-        });
-
-        // Interact prompt
-        this.interactText = this.add.text(400, 400, '', {
+        this.interactText = this.add.text(400, 555, '', {
             fontSize: '15px',
             fill: '#ffff99',
-            fontFamily: 'monospace'
-        }).setOrigin(0.5);
+            fontFamily: 'monospace',
+            backgroundColor: '#000000aa',
+            padding: { x: 8, y: 4 }
+        }).setOrigin(0.5).setDepth(600);
+    }
 
+    buildPauseMenu() {
+        const depth = 600;
 
+        this.pauseOverlay = this.add.rectangle(400, 300, 800, 600, 0x000000, 0.75)
+            .setDepth(depth).setVisible(false);
+
+        this.pausePanel = this.add.rectangle(400, 305, 320, 260, 0x111122, 1)
+            .setDepth(depth + 1).setVisible(false)
+            .setStrokeStyle(2, 0xaaddff);
+
+        this.pauseTitle = this.add.text(400, 208, 'PAUSED', {
+            fontSize: '22px', fill: '#ffffff', fontFamily: 'monospace'
+        }).setOrigin(0.5).setDepth(depth + 2).setVisible(false);
+
+        this.pauseContinueBtn = this.add.rectangle(400, 260, 200, 36, 0x224488)
+            .setDepth(depth + 2).setVisible(false).setInteractive({ useHandCursor: true })
+            .on('pointerdown', () => this.resumeGame())
+            .on('pointerover', function() { this.setFillStyle(0x3366cc); })
+            .on('pointerout',  function() { this.setFillStyle(0x224488); });
+        this.pauseContinueText = this.add.text(400, 260, 'Continue', {
+            fontSize: '16px', fill: '#ffffff', fontFamily: 'monospace'
+        }).setOrigin(0.5).setDepth(depth + 3).setVisible(false);
+
+        this.pauseVolLabel = this.add.text(252, 312, 'MUSIC VOL', {
+            fontSize: '13px', fill: '#aaddff', fontFamily: 'monospace'
+        }).setOrigin(0, 0.5).setDepth(depth + 2).setVisible(false);
+
+        this.pauseVolMinBtn = this.add.rectangle(418, 312, 26, 26, 0x334455)
+            .setDepth(depth + 2).setVisible(false).setInteractive({ useHandCursor: true })
+            .on('pointerdown', () => this._adjustVolume(-0.1))
+            .on('pointerover', function() { this.setFillStyle(0x446677); })
+            .on('pointerout',  function() { this.setFillStyle(0x334455); });
+        this.pauseVolMinText = this.add.text(418, 312, '−', {
+            fontSize: '16px', fill: '#ffffff', fontFamily: 'monospace'
+        }).setOrigin(0.5).setDepth(depth + 3).setVisible(false);
+
+        this.pauseVolText = this.add.text(450, 312, '40%', {
+            fontSize: '13px', fill: '#ffffff', fontFamily: 'monospace'
+        }).setOrigin(0.5).setDepth(depth + 3).setVisible(false);
+
+        this.pauseVolPlusBtn = this.add.rectangle(484, 312, 26, 26, 0x334455)
+            .setDepth(depth + 2).setVisible(false).setInteractive({ useHandCursor: true })
+            .on('pointerdown', () => this._adjustVolume(0.1))
+            .on('pointerover', function() { this.setFillStyle(0x446677); })
+            .on('pointerout',  function() { this.setFillStyle(0x334455); });
+        this.pauseVolPlusText = this.add.text(484, 312, '+', {
+            fontSize: '16px', fill: '#ffffff', fontFamily: 'monospace'
+        }).setOrigin(0.5).setDepth(depth + 3).setVisible(false);
+
+        this.pauseEndBtn = this.add.rectangle(400, 366, 200, 36, 0x882222)
+            .setDepth(depth + 2).setVisible(false).setInteractive({ useHandCursor: true })
+            .on('pointerdown', () => this.scene.start('TitleScene'))
+            .on('pointerover', function() { this.setFillStyle(0xcc3333); })
+            .on('pointerout',  function() { this.setFillStyle(0x882222); });
+        this.pauseEndText = this.add.text(400, 366, 'End Game', {
+            fontSize: '16px', fill: '#ffffff', fontFamily: 'monospace'
+        }).setOrigin(0.5).setDepth(depth + 3).setVisible(false);
+
+        this.menuBtn = this.add.rectangle(770, 18, 56, 22, 0x224488)
+            .setDepth(depth).setInteractive({ useHandCursor: true })
+            .on('pointerdown', () => this.togglePause())
+            .on('pointerover', function() { this.setFillStyle(0x3366cc); })
+            .on('pointerout',  function() { this.setFillStyle(0x224488); });
+        this.add.text(770, 18, 'MENU', {
+            fontSize: '11px', fill: '#ffffff', fontFamily: 'monospace'
+        }).setOrigin(0.5).setDepth(depth + 1);
+    }
+
+    _adjustVolume(delta) {
+        const newVol = Math.max(0, Math.min(1, this.musicSound.volume + delta));
+        this.musicSound.setVolume(newVol);
+        this.pauseVolText.setText(`${Math.round(newVol * 100)}%`);
+    }
+
+    togglePause() {
+        if (this.isPaused) {
+            this.resumeGame();
+        } else {
+            this.pauseGame();
+        }
+    }
+
+    pauseGame() {
+        this.isPaused = true;
+        this.player.body.setVelocity(0, 0);
+        this.pauseVolText.setText(`${Math.round(this.musicSound.volume * 100)}%`);
+        [this.pauseOverlay, this.pausePanel, this.pauseTitle,
+         this.pauseContinueBtn, this.pauseContinueText,
+         this.pauseVolLabel, this.pauseVolMinBtn, this.pauseVolMinText,
+         this.pauseVolText, this.pauseVolPlusBtn, this.pauseVolPlusText,
+         this.pauseEndBtn, this.pauseEndText].forEach(o => o.setVisible(true));
+    }
+
+    resumeGame() {
+        this.isPaused = false;
+        [this.pauseOverlay, this.pausePanel, this.pauseTitle,
+         this.pauseContinueBtn, this.pauseContinueText,
+         this.pauseVolLabel, this.pauseVolMinBtn, this.pauseVolMinText,
+         this.pauseVolText, this.pauseVolPlusBtn, this.pauseVolPlusText,
+         this.pauseEndBtn, this.pauseEndText].forEach(o => o.setVisible(false));
     }
 
     // ─── Controls ─────────────────────────────────────────────────────────────
@@ -296,6 +371,7 @@ class CampusScene extends Phaser.Scene {
     // ─── Update ───────────────────────────────────────────────────────────────
 
     update() {
+        if (this.isPaused) return;
         this.handleMovement();
         this.handleDoorInteraction();
         this.handleQuestionInput();
@@ -388,7 +464,7 @@ class CampusScene extends Phaser.Scene {
         }
 
         if (Phaser.Input.Keyboard.JustDown(this.helpKey)) {
-            this.feedbackText.setText('HELP: Answer all tokens, then pick the correct door!');
+            this._domFeedback.textContent = 'HELP: Answer all tokens, then pick the correct door!';
         }
     }
 
@@ -397,7 +473,7 @@ class CampusScene extends Phaser.Scene {
         if (side === this.correctDoor) {
             this.gameState.score += 100;
             this.gameState.choices.push(`Door ${side === 'left' ? 'A' : 'B'} \u2713`);
-            this.feedbackText.setText('\u2713 Correct door! You found the way out!');
+            this._domFeedback.textContent = '\u2713 Correct door! You found the way out!';
             this.time.delayedCall(1500, () => {
                 this.scene.start('WinScene', {
                     score: this.gameState.score,
@@ -409,7 +485,7 @@ class CampusScene extends Phaser.Scene {
         } else {
             this.gameState.anxiety = Math.min(100, this.gameState.anxiety + 25);
             this.gameState.choices.push(`Door ${side === 'left' ? 'A' : 'B'} \u2717`);
-            this.feedbackText.setText('\u2717 Wrong door! Anxiety +25%.');
+            this._domFeedback.textContent = '\u2717 Wrong door! Anxiety +25%.';
             this.isChoosing = false;
             this.gameState.interactionCooldown = true;
             this.time.delayedCall(2000, () => {
@@ -432,11 +508,11 @@ class CampusScene extends Phaser.Scene {
     }
 
     updateUI() {
-        this.scoreText.setText(`SCORE: ${this.gameState.score}`);
-        const barWidth = (this.gameState.anxiety / 100) * 150;
-        this.anxietyBar.width = barWidth;
-        this.anxietyBar.setFillStyle(this.gameState.anxiety < 50 ? 0xffaa00 : 0xff2222);
-        this.anxietyLabel.setText(`${this.gameState.anxiety}%`);
+        this._domScore.textContent = `SCORE: ${this.gameState.score}`;
+        const pct = this.gameState.anxiety;
+        this._domBar.style.width = `${pct}%`;
+        this._domBar.style.background = pct < 50 ? '#ffaa00' : '#ff2222';
+        this._domPct.textContent = `${pct}%`;
     }
 
     // ─── Tunnel Vision ────────────────────────────────────────────────────────
@@ -474,30 +550,27 @@ class CampusScene extends Phaser.Scene {
             { x: 420, y: 480 },
         ];
 
-        positions.forEach((pos, i) => {
-            const token = this.add.circle(pos.x, pos.y, 10, 0x00ccff);
+        positions.forEach((pos) => {
+            const token = this.add.rectangle(pos.x, pos.y, 24, 24, 0xffdd00);
+            token.setStrokeStyle(2, 0xff8800);
             token.setDepth(10);
             this.physics.add.existing(token, true);
+            token.body.setSize(24, 24);
+            token.body.reset(pos.x, pos.y);
             this.tokens.add(token);
 
-            const label = this.add.text(pos.x, pos.y - 18, '?', {
-                fontSize: '14px', fill: '#ffffff', fontFamily: 'monospace'
+            const label = this.add.text(pos.x, pos.y, '?', {
+                fontSize: '16px', fill: '#885500', fontFamily: 'monospace', fontStyle: 'bold'
             }).setOrigin(0.5).setDepth(11);
             token.label = label;
 
             this.tweens.add({
                 targets: [token, label],
-                y: '-=6',
-                duration: 800,
-                yoyo: true,
-                repeat: -1,
+                scaleX: 1.2, scaleY: 1.2,
+                duration: 500, yoyo: true, repeat: -1,
                 ease: 'Sine.easeInOut'
             });
         });
-
-        this.questText = this.add.text(20, 104, `Collect questions: 0 / ${this.totalQuestions}`, {
-            fontSize: '13px', fill: '#aaddff', fontFamily: 'monospace'
-        }).setDepth(10);
     }
 
     // ─── Question UI ──────────────────────────────────────────────────────────
@@ -716,11 +789,12 @@ class CampusScene extends Phaser.Scene {
         this._qOverlay.style.display = 'none';
 
         this.questionsCompleted++;
-        this.questText.setText(`Collect questions: ${this.questionsCompleted} / ${this.totalQuestions}`);
+        this._domQuestText.textContent = `Collect questions: ${this.questionsCompleted} / ${this.totalQuestions}`;
 
         if (this.questionsCompleted >= this.totalQuestions) {
             this.gameState.allTokensComplete = true;
-            this.questText.setText('All done! Now find the correct door. \u2714').setStyle({ fill: '#44ff88' });
+            this._domQuestText.textContent = 'All done! Now find the correct door. \u2714';
+            this._domQuestText.style.color = '#44ff88';
             this.playNarration('All done! Now find the correct door.');
         }
 
